@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliDesk — 智能客服</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<div class="app">
+    <!-- ── 侧边栏 ── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="logo">🤖 IntelliDesk</span>
+        </div>
+        <button class="btn-new-chat" id="btnNewChat">+ 新对话</button>
+        <div class="history-list" id="historyList"></div>
+        <div class="sidebar-footer">
+            <span class="version">v0.4.0</span>
+        </div>
+    </aside>
+
+    <!-- ── 主区域 ── -->
+    <main class="main">
+        <!-- 顶栏 -->
+        <header class="topbar">
+            <button class="btn-toggle-sidebar" id="btnToggleSidebar" title="切换侧边栏">☰</button>
+            <h1 class="topbar-title">IntelliDesk 智能客服</h1>
+            <span class="topbar-status" id="statusIndicator">● 就绪</span>
+        </header>
+
+        <!-- 消息列表 -->
+        <div class="messages" id="messages">
+            <!-- 欢迎消息 -->
+            <div class="welcome" id="welcome">
+                <div class="welcome-icon">🤖</div>
+                <h2>你好！我是小智</h2>
+                <p>IntelliDesk 官方智能客服助手。你可以问我：</p>
+                <div class="suggestions">
+                    <button class="suggestion" data-msg="免费版能用 API 吗？">免费版能用 API 吗？</button>
+                    <button class="suggestion" data-msg="Pro 版和免费版有什么区别？">Pro 版和免费版有什么区别？</button>
+                    <button class="suggestion" data-msg="如何上传文档？">如何上传文档？</button>
+                    <button class="suggestion" data-msg="北京今天天气怎么样？">北京今天天气怎么样？</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="input-area">
+            <textarea
+                id="input"
+                class="input"
+                placeholder="输入你的问题，Enter 发送，Shift+Enter 换行..."
+                rows="1"
+                autofocus
+            ></textarea>
+            <button class="btn-send" id="btnSend" title="发送">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                </svg>
+            </button>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="/static/js/chat.js"></script>
+</body>
+</html>

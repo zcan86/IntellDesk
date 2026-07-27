@@ -1,0 +1,14 @@
+venv/
+.git/
+.gitignore
+.env.example
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+*.log
+data/chroma_db/
+data/uploads/*
+!data/uploads/.gitkeep
+README.md
+docs/
