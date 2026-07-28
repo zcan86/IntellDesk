@@ -40,9 +40,7 @@ class Settings(BaseSettings):
     )
 
     # ================== RAG ====================
-    CHROMA_PERSIST_DIR: str = Field(
-        "data/chroma_db", description="ChromaDB 持久化目录"
-    )
+    # 当前使用 scikit-learn TF-IDF（内存索引），无需持久化目录
     CHUNK_SIZE: int = Field(500, description="文档切分块大小")
     CHUNK_OVERLAP: int = Field(50, description="文档切分重叠大小")
     TOP_K_RETRIEVAL: int = Field(3, description="RAG 检索返回数量")

@@ -15,9 +15,7 @@ langgraph==1.2.9
 openai==2.47.0
 
 # ================== RAG ====================
-chromadb==1.1.1
 langchain-text-splitters==1.0.0
-langchain-chroma==1.0.0
 pypdf==5.5.0
 scikit-learn==1.7.2
 

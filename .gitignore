@@ -26,7 +26,6 @@ project_venv/
 Thumbs.db
 
 # 项目数据
-data/chroma_db/
 data/uploads/*
 !data/uploads/.gitkeep
 
