@@ -20,7 +20,6 @@ class TestRAGIndex:
         status = get_index_status()
         assert status["ready"] is True
         assert status["chunk_count"] > 0
-        assert status["vocab_size"] > 0
 
     def test_build_index_skips_when_ready(self):
         """已就绪时不重复构建"""
@@ -54,7 +53,7 @@ class TestRAGSearch:
         results = search_knowledge("火星上有没有水")
         # 要么无结果，要么分数很低
         if results:
-            assert results[0]["score"] < 0.4  # TF-IDF 字符重叠可能有低分
+            assert results[0]["score"] < 0.5  # 语义不相关，相似度应低
 
     def test_search_top_k(self):
         """top_k 参数生效"""

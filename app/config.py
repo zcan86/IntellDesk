@@ -30,17 +30,19 @@ class Settings(BaseSettings):
         "deepseek-chat", description="DeepSeek 模型名称"
     )
 
-    # ================== Embedding ====================
+    # ================== Embedding（硅基流动）====================
     EMBEDDING_MODEL_NAME: str = Field(
-        "text-embedding-3-small", description="Embedding 模型名"
+        "BAAI/bge-m3", description="SiliconFlow Embedding 模型"
     )
-    EMBEDDING_API_KEY: str = Field("", description="Embedding 模型 API Key")
+    EMBEDDING_API_KEY: str = Field("", description="Embedding API Key")
     EMBEDDING_BASE_URL: str = Field(
-        "https://api.deepseek.com", description="Embedding 模型 API 地址"
+        "https://api.siliconflow.cn/v1", description="Embedding API 地址"
     )
 
     # ================== RAG ====================
-    # 当前使用 scikit-learn TF-IDF（内存索引），无需持久化目录
+    CHROMA_PERSIST_DIR: str = Field(
+        "data/chroma_db", description="ChromaDB 向量库持久化目录"
+    )
     CHUNK_SIZE: int = Field(500, description="文档切分块大小")
     CHUNK_OVERLAP: int = Field(50, description="文档切分重叠大小")
     TOP_K_RETRIEVAL: int = Field(3, description="RAG 检索返回数量")

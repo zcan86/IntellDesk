@@ -1,54 +1,56 @@
 # -*- coding: utf-8 -*-
-"""RAG 文档加载与检索
+"""RAG 文档加载与检索（ChromaDB + 硅基流动 BGE Embedding）
 
-使用 scikit-learn TF-IDF + 余弦相似度做本地检索：
-- 无需下载任何模型，零网络依赖
-- 启动瞬时完成
-- 对产品文档这类关键词密集文本效果良好
+使用 ChromaDB 持久化向量索引 + 硅基流动 BAAI/bge-m3 嵌入 API：
+- 语义理解：同义词、近义改写都能匹配
+- 1024 维向量，中英双语 SOTA
+- 无需下载本地模型，API 调用（免费额度）
 
 职责：
 1. 加载 docs/products/ 下的 Markdown 文档
 2. 按标题层级切分
-3. 构建 TF-IDF 索引
-4. 提供检索接口
+3. 调 SiliconFlow API 向量化并存入 ChromaDB
+4. 提供语义检索接口
 """
 
-import pickle
 from pathlib import Path
 
-import numpy as np
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 from loguru import logger
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 from app.config import settings, PROJECT_ROOT
 
-# ── 全局状态 ──────────────────────────────────────────────────
-_chunks: list[dict] = []           # 所有文档块
-_vectorizer: TfidfVectorizer | None = None
-_tfidf_matrix = None               # 文档 TF-IDF 矩阵
-_index_ready: bool = False
+# ── 全局单例 ──────────────────────────────────────────────────
+_vector_store: Chroma | None = None
+
+
+def _get_embedding_function():
+    """返回硅基流动 BGE 嵌入函数
+
+    BAAI/bge-m3：
+    - BGE 系列最强多语言模型，中英文 SOTA
+    - 1024 维向量
+    - 通过硅基流动 API 调用，无需本地 GPU/下载
+    """
+    return OpenAIEmbeddings(
+        model=settings.EMBEDDING_MODEL_NAME,
+        api_key=settings.EMBEDDING_API_KEY,
+        base_url=settings.EMBEDDING_BASE_URL,
+    )
 
 
 def _load_and_split_docs(docs_dir: Path) -> list[dict]:
-    """加载目录下所有 .md 文件，按标题 + 字符数两层切分
-
-    Returns:
-        [{"content": "...", "metadata": {...}}, ...]
-    """
+    """加载目录下所有 .md 文件，按标题 + 字符数两层切分"""
     md_splitter = MarkdownHeaderTextSplitter(
-        headers_to_split_on=[
-            ("#", "h1"),
-            ("##", "h2"),
-            ("###", "h3"),
-        ],
+        headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
         strip_headers=False,
     )
 
     char_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=settings.CHUNK_SIZE,        # 500
-        chunk_overlap=settings.CHUNK_OVERLAP,   # 50
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP,
         separators=["\n\n", "\n", "。", ".", " ", ""],
     )
 
@@ -83,102 +85,108 @@ def _load_and_split_docs(docs_dir: Path) -> list[dict]:
 
 
 def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> bool:
-    """构建 TF-IDF 索引
+    """构建（或加载）ChromaDB 向量索引
 
-    Args:
-        docs_dir: 文档目录，默认 docs/products/
-        force_rebuild: 是否强制重建
-
-    Returns:
-        True 表示索引构建成功
+    - 首次构建：加载文档 → Embedding → 写入磁盘（需下载模型 ~24MB）
+    - 后续启动：直接从磁盘加载已有索引（秒级）
+    - force_rebuild=True：删除旧索引重新构建
     """
-    global _chunks, _vectorizer, _tfidf_matrix, _index_ready
+    global _vector_store
 
-    if _index_ready and not force_rebuild:
+    if _vector_store is not None and not force_rebuild:
         return True
 
     if docs_dir is None:
         docs_dir = str(PROJECT_ROOT / "docs" / "products")
 
+    persist_dir = str(PROJECT_ROOT / settings.CHROMA_PERSIST_DIR)
     docs_path = Path(docs_dir)
+
     if not docs_path.exists():
         logger.error(f"文档目录不存在: {docs_dir}")
         return False
 
+    # 强制重建：删除旧索引（Windows 下文件可能被锁，最多重试 3 次）
+    if force_rebuild and Path(persist_dir).exists():
+        import shutil, time
+        for attempt in range(3):
+            try:
+                shutil.rmtree(persist_dir)
+                logger.info("  已清空旧向量索引")
+                break
+            except PermissionError:
+                if attempt < 2:
+                    time.sleep(0.5)
+                else:
+                    logger.warning("  无法删除旧索引（文件被占用），跳过清理")
+
+    embedding_fn = _get_embedding_function()
+
     # 1. 加载并切分
-    _chunks = _load_and_split_docs(docs_path)
-    if not _chunks:
+    chunks = _load_and_split_docs(docs_path)
+    if not chunks:
         logger.warning("没有可索引的文档块")
-        _index_ready = False
         return False
 
-    # 2. 构建 TF-IDF 向量
-    logger.info("  构建 TF-IDF 索引...")
-    contents = [c["content"] for c in _chunks]
-    _vectorizer = TfidfVectorizer(
-        max_features=5000,              # 词汇表上限
-        ngram_range=(1, 2),             # 单字 + 双字组合
-        analyzer="char_wb",             # 字符级（中英文兼容）
-        strip_accents="unicode",
-    )
-    _tfidf_matrix = _vectorizer.fit_transform(contents)
-    _index_ready = True
+    # 2. 构建向量索引
+    logger.info(f"  正在构建 ChromaDB 向量索引（{len(chunks)} 个块）...")
+    contents = [c["content"] for c in chunks]
+    metadatas = [c["metadata"] for c in chunks]
 
-    logger.info(f"  TF-IDF 索引就绪: {len(_chunks)} 个块, 词汇量 {len(_vectorizer.vocabulary_)}")
+    _vector_store = Chroma.from_texts(
+        texts=contents,
+        metadatas=metadatas,
+        embedding=embedding_fn,
+        persist_directory=persist_dir,
+        collection_name="intellidesk_docs",
+    )
+    logger.info(f"  ChromaDB 索引就绪: {_vector_store._collection.count()} 个块, 持久化到 {persist_dir}")
     return True
 
 
 def get_index_status() -> dict:
     """返回索引状态"""
-    return {
-        "ready": _index_ready,
-        "chunk_count": len(_chunks),
-        "vocab_size": len(_vectorizer.vocabulary_) if _vectorizer else 0,
-    }
+    if _vector_store is None:
+        return {"ready": False, "chunk_count": 0}
+    try:
+        count = _vector_store._collection.count()
+        return {"ready": True, "chunk_count": count}
+    except Exception:
+        return {"ready": False, "chunk_count": 0}
+
+
+def get_vector_store() -> Chroma | None:
+    """获取当前向量库实例"""
+    return _vector_store
 
 
 def search_knowledge(query: str, top_k: int | None = None) -> list[dict]:
-    """TF-IDF + 余弦相似度检索
+    """语义检索知识库
 
-    Args:
-        query: 用户问题
-        top_k: 返回数量
-
-    Returns:
-        [{"content": "...", "source": "...", "score": 0.85}, ...]
+    使用 ChromaDB 的相似度搜索，基于 BGE 中文 Embedding 做语义匹配。
+    同义词和近义改写都能有效召回。
     """
-    if not _index_ready or _vectorizer is None:
+    if _vector_store is None:
         return []
 
     if top_k is None:
         top_k = settings.TOP_K_RETRIEVAL
 
     try:
-        # 查询向量化
-        query_vec = _vectorizer.transform([query])
+        results = _vector_store.similarity_search_with_score(query, k=top_k)
 
-        # 余弦相似度
-        scores = cosine_similarity(query_vec, _tfidf_matrix).flatten()
-
-        # Top-K
-        top_indices = np.argsort(scores)[::-1][:top_k]
-
-        results = []
-        for idx in top_indices:
-            score = float(scores[idx])
-            if score < 0.01:  # 过滤完全不相关的结果
-                continue
-            chunk = _chunks[idx]
-            results.append({
-                "content": chunk["content"],
-                "source": chunk["metadata"].get("source", "unknown"),
-                "h1": chunk["metadata"].get("h1", ""),
-                "h2": chunk["metadata"].get("h2", ""),
-                "score": round(score, 4),
-            })
-
-        return results
-
+        return [
+            {
+                "content": doc.page_content,
+                "source": doc.metadata.get("source", "unknown"),
+                "h1": doc.metadata.get("h1", ""),
+                "h2": doc.metadata.get("h2", ""),
+                # ChromaDB 返回余弦距离（0=完全相同, 2=完全相反）
+                # 转为相似度（1=完全相同, 0=无关），更直观
+                "score": round(1.0 - score, 4),
+            }
+            for doc, score in results
+        ]
     except Exception as e:
-        logger.error(f"检索失败: {e}")
+        logger.error(f"知识库检索失败: {e}")
         return []
