@@ -30,34 +30,57 @@ def get_weather(city: str) -> str:
     logger.info(f"🌤 查询天气: {city}")
 
     try:
-        # wttr.in 是一个免费天气 API，无需 API Key
-        # ?format=j1 → 返回 JSON 格式
-        resp = requests.get(
-            f"https://wttr.in/{city}",
-            params={"format": "j1"},
+        # 1. 先用城市名获取经纬度（Open-Meteo Geocoding API，免费无需 Key）
+        geo_resp = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": city, "count": 1, "language": "zh"},
             timeout=10,
-            headers={"Accept-Language": "zh-CN"},
+            headers={"User-Agent": "IntelliDesk/1.0"},
         )
-        resp.raise_for_status()
-        data = resp.json()
+        geo_resp.raise_for_status()
+        geo_data = geo_resp.json()
 
-        current = data.get("current_condition", [{}])[0]
-        if not current:
-            return f"抱歉，未找到「{city}」的天气信息，请确认城市名称是否正确。"
+        results = geo_data.get("results", [])
+        if not results:
+            return f"抱歉，未找到「{city}」的位置信息，请确认城市名称是否正确。"
 
-        weather_desc = current.get("weatherDesc", [{}])[0].get("value", "未知")
-        temp_c = current.get("temp_C", "未知")
-        humidity = current.get("humidity", "未知")
-        wind_speed = current.get("windspeedKmph", "未知")
+        lat = results[0]["latitude"]
+        lon = results[0]["longitude"]
+        name = results[0].get("name", city)
 
-        # 取最近 1 天的天气预测
-        forecast = data.get("weather", [{}])
-        today = forecast[0] if forecast else {}
-        max_temp = today.get("maxtempC", "未知")
-        min_temp = today.get("mintempC", "未知")
+        # 2. 用经纬度获取天气（Open-Meteo Weather API，免费无需 Key）
+        weather_resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+                "daily": "temperature_2m_max,temperature_2m_min",
+                "timezone": "Asia/Shanghai",
+                "forecast_days": 1,
+            },
+            timeout=10,
+            headers={"User-Agent": "IntelliDesk/1.0"},
+        )
+        weather_resp.raise_for_status()
+        wdata = weather_resp.json()
+
+        current = wdata.get("current", {})
+        daily = wdata.get("daily", {})
+
+        temp_c = current.get("temperature_2m", "未知")
+        humidity = current.get("relative_humidity_2m", "未知")
+        wind_speed = current.get("wind_speed_10m", "未知")
+        weather_code = current.get("weather_code", 0)
+
+        max_temp = daily.get("temperature_2m_max", ["未知"])[0] if daily.get("temperature_2m_max") else "未知"
+        min_temp = daily.get("temperature_2m_min", ["未知"])[0] if daily.get("temperature_2m_min") else "未知"
+
+        # WMO 天气码转中文描述
+        weather_desc = _weather_code_to_text(weather_code)
 
         return (
-            f"🌍 {city} 当前天气：\n"
+            f"🌍 {name} 当前天气：\n"
             f"  天气状况：{weather_desc}\n"
             f"  当前温度：{temp_c}°C\n"
             f"  今日最高：{max_temp}°C / 最低：{min_temp}°C\n"
@@ -71,6 +94,20 @@ def get_weather(city: str) -> str:
     except Exception as e:
         logger.error(f"天气数据解析失败: {e}")
         return f"天气数据解析失败，请稍后重试。"
+
+
+def _weather_code_to_text(code: int) -> str:
+    """WMO 天气码 → 中文描述"""
+    code_map = {
+        0: "晴天 ☀️", 1: "大部晴朗 🌤", 2: "多云 ⛅", 3: "阴天 ☁️",
+        45: "有雾 🌫", 48: "雾凇 🌫", 51: "小毛毛雨 🌧", 53: "毛毛雨 🌧",
+        55: "大毛毛雨 🌧", 61: "小雨 🌧", 63: "中雨 🌧", 65: "大雨 🌧",
+        71: "小雪 ❄️", 73: "中雪 ❄️", 75: "大雪 ❄️", 77: "雪粒 ❄️",
+        80: "阵雨 ⛈", 81: "中阵雨 ⛈", 82: "大阵雨 ⛈",
+        85: "小阵雪 🌨", 86: "大阵雪 🌨", 95: "雷暴 ⛈", 96: "冰雹雷暴 ⛈",
+        99: "强雷暴 ⛈",
+    }
+    return code_map.get(code, f"未知天气（码{code}）")
 
 
 @tool
