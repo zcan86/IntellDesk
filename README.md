@@ -1,6 +1,6 @@
 # 🤖 IntelliDesk — 智能客服 Agent
 
-基于 **LangChain Agent + RAG + 多工具调用** 的 SaaS 产品智能客服系统。
+基于 **LangGraph Agent + ChromaDB 语义检索 + 多工具调用** 的 SaaS 产品智能客服系统。
 
 用户输入自然语言问题 → Agent 自主判断意图 → 检索知识库或调用外部工具 → SSE 流式返回答案。
 
@@ -39,11 +39,11 @@
            │
     ┌──────┼──────┬──────────┐
     ▼      ▼      ▼          ▼
-┌──────┐┌─────┐┌──────┐┌──────────┐
-│知识库││天气 ││计算器││当前时间   │
-│RAG   ││wttr ││eval  ││datetime  │
-│TF-IDF││.in  ││沙箱  ││          │
-└──────┘└─────┘└──────┘└──────────┘
+┌──────────┐┌─────┐┌──────┐┌──────────┐
+│ 知识库    ││天气 ││计算器││当前时间   │
+│ ChromaDB ││wttr ││eval  ││datetime  │
+│ BGE-m3   ││.in  ││沙箱  ││          │
+└──────────┘└─────┘└──────┘└──────────┘
 ```
 
 | 层级 | 技术 | 说明 |
@@ -51,7 +51,7 @@
 | 前端 | HTML5 + CSS3 + Vanilla JS | 零框架，纯原生实现 |
 | 后端 | FastAPI + Pydantic | 异步 HTTP 服务 |
 | Agent | LangChain + LangGraph | ReAct Agent + MemorySaver |
-| 检索 | scikit-learn TF-IDF | 零依赖检索，无需 Embedding 模型 |
+| 检索 | ChromaDB + 硅基流动 BGE-m3 | 1024 维语义向量，支持中英文同义词/近义改写 |
 | LLM | DeepSeek Chat (OpenAI 兼容) | 可替换为任意兼容服务 |
 
 ---
@@ -62,6 +62,7 @@
 
 - Python 3.12+
 - DeepSeek API Key（[申请地址](https://platform.deepseek.com/)）
+- SiliconFlow API Key（[申请地址](https://cloud.siliconflow.cn/)，用于 Embedding）
 
 ### 2. 安装
 
@@ -79,7 +80,9 @@ pip install -r requirements.txt
 
 # 配置 API Key
 cp .env.example .env
-# 编辑 .env，填入 DEEPSEEK_API_KEY=sk-xxxxxxxx
+# 编辑 .env，填入：
+#   DEEPSEEK_API_KEY=sk-xxxxxxxx      （DeepSeek 大模型）
+#   EMBEDDING_API_KEY=sk-xxxxxxxx     （硅基流动 Embedding）
 ```
 
 ### 3. 验证 LLM 连通性
@@ -114,7 +117,7 @@ intellidesk/
 │   ├── agent.py              # Agent 核心（LLM + System Prompt + MemorySaver）
 │   ├── config.py             # 全局配置（pydantic-settings）
 │   ├── rag/
-│   │   └── loader.py         # 文档加载 → 切分 → TF-IDF 索引 → 检索
+│   │   └── loader.py         # 文档加载 → 切分 → ChromaDB 向量索引 → 语义检索
 │   ├── routers/
 │   │   └── chat.py           # API 路由（chat / stream / reindex）
 │   └── tools/
@@ -193,7 +196,7 @@ pytest tests/test_api.py -v
 - [x] 阶段 4：SSE 流式输出 + 多轮对话 Memory
 - [x] 阶段 5：前端聊天界面
 - [x] 阶段 6：测试 + Docker 部署
-- [ ] 优化：Embedding 升级为硅基流动 BGE-M3
+- [x] 优化：Embedding 升级为 ChromaDB + 硅基流动 BGE-m3 语义检索
 - [ ] 优化：工具调用迭代次数限制
 - [ ] 优化：企业微信 / 飞书 Bot 接入
 
