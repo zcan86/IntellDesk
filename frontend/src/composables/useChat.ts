@@ -65,7 +65,40 @@ export function useChat() {
     finally { isStreaming.value = false }
   }
 
+  async function sendMultimodal(file: File, text: string) {
+    if (isStreaming.value) return
+    isStreaming.value = true
+    const form = new FormData()
+    form.append('file', file)
+    form.append('message', text || '')
+    if (sessionId.value) form.append('session_id', sessionId.value)
+
+    addUserMessage(text || `[上传了 ${file.name}]`)
+    addAgentPlaceholder()
+
+    try {
+      const resp = await fetch('/api/chat/upload', { method: 'POST', body: form })
+      if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
+      const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break
+        buf += decoder.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop() || ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const evt = JSON.parse(line.slice(6))
+            if (evt.type === 'token') appendToken(evt.content)
+            else if (evt.type === 'tool_start') showTool(evt.tool)
+            else if (evt.type === 'tool_end') hideTool()
+            else if (evt.type === 'done') { finalizeAgent(); if (evt.session_id && !sessionId.value) sessionId.value = evt.session_id }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err: any) { appendToken('\n\n' + err.message); finalizeAgent() }
+    finally { isStreaming.value = false }
+  }
+
   function clearMessages() { messages.value = []; sessionId.value = null }
   function renderMarkdown(text: string) { return marked.parse(text) }
-  return { messages, isStreaming, sessionId, currentAgent, sendMessage, clearMessages, renderMarkdown }
+  return { messages, isStreaming, sessionId, currentAgent, sendMessage, sendMultimodal, clearMessages, renderMarkdown }
 }

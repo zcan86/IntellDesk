@@ -9,7 +9,10 @@ POST /api/documents/reindex — 重建知识库索引
 import json
 import uuid
 
-from fastapi import APIRouter, HTTPException
+import json as json_module
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from loguru import logger
@@ -20,7 +23,9 @@ from app.rag.loader import build_index, get_index_status
 from app.tools.knowledge_search import search_knowledge_base
 from app.tools.builtin_tools import get_weather, calculator, get_current_time
 from app.tools.ecommerce import query_order, track_delivery, return_guide, product_search
+from app.tools.multimodal import recognize_image, transcribe_audio
 from app.agents.orchestrator import get_orchestrator, reset_orchestrator
+from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -63,7 +68,9 @@ def get_agent():
                 logger.warning("MCP 连接失败，降级为直接模式")
                 _agent = create_intellidesk_agent(
                     tools=[search_knowledge_base, query_order, track_delivery,
-                           return_guide, product_search, get_weather, calculator, get_current_time]
+                           return_guide, product_search,
+                           recognize_image, transcribe_audio,
+                           get_weather, calculator, get_current_time]
                 )
             else:
                 _agent = create_intellidesk_agent(tools=tools)
@@ -72,14 +79,10 @@ def get_agent():
             logger.info("正在初始化 Agent（直接模式）...")
             _agent = create_intellidesk_agent(
                 tools=[
-                    search_knowledge_base,  # 知识库检索
-                    query_order,            # 订单查询
-                    track_delivery,         # 物流跟踪
-                    return_guide,           # 退换货指引
-                    product_search,         # 商品搜索
-                    get_weather,            # 天气
-                    calculator,             # 计算器
-                    get_current_time,       # 时间
+                    search_knowledge_base,
+                    query_order, track_delivery, return_guide, product_search,
+                    recognize_image, transcribe_audio,  # 多模态
+                    get_weather, calculator, get_current_time,
                 ]
             )
             logger.info("Agent 就绪（直接: 8 工具）")
@@ -248,6 +251,74 @@ async def chat_stream(req: ChatRequest):
     except Exception as e:
         logger.exception(f"SSE 初始化失败: {e}")
         raise HTTPException(status_code=500, detail=f"流式请求失败: {str(e)}")
+
+
+# ── 多模态上传 ──────────────────────────────────────────────
+
+@router.post("/chat/upload")
+async def upload_and_chat(
+    file: UploadFile = File(...),
+    message: str = Form(""),
+    session_id: str | None = Form(None),
+):
+    """上传图片/音频并对话
+
+    用户上传文件后，自动调用识别工具转为文字描述，
+    再将文字作为消息发送给 Agent。
+    """
+    try:
+        content = await file.read()
+        filepath = save_upload(content, file.filename or "upload")
+        ext = Path(filepath).suffix.lower()
+
+        # 根据文件类型选择工具
+        if ext in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+            extra_msg = recognize_image.invoke(filepath)
+            msg_type = "图片识别"
+        elif ext in (".mp3", ".wav", ".m4a", ".ogg", ".webm"):
+            extra_msg = transcribe_audio.invoke(filepath)
+            msg_type = "语音转文字"
+        else:
+            return {"error": f"不支持的文件格式: {ext}"}
+
+        # 拼装消息
+        full_msg = message
+        if extra_msg and "失败" not in extra_msg and "不可用" not in extra_msg:
+            full_msg = f"[{msg_type}结果] {extra_msg}\n\n[用户补充] {message}" if message else f"[{msg_type}结果] {extra_msg}"
+        elif message:
+            full_msg = message
+
+        logger.info(f"多模态输入: {msg_type} → {str(filepath)}")
+
+        # 走流式对话
+        agent = get_agent()
+        session_id = session_id or str(uuid.uuid4())
+        config = {"configurable": {"thread_id": session_id}}
+
+        async def event_generator():
+            yield f"data: {json_module.dumps({'type': 'token', 'content': f'[{msg_type}] {file.filename}\\\\n'}, ensure_ascii=False)}\\\\n\\\\n"
+            try:
+                async for event in agent.astream_events(
+                    {"messages": [("user", full_msg)]}, config=config, version="v2"
+                ):
+                    kind = event.get("event", "")
+                    if kind == "on_chat_model_stream":
+                        chunk = event.get("data", {}).get("chunk")
+                        if chunk and hasattr(chunk, "content") and chunk.content:
+                            yield f"data: {json_module.dumps({'type': 'token', 'content': chunk.content}, ensure_ascii=False)}\\\\n\\\\n"
+                    elif kind == "on_tool_start":
+                        yield f"data: {json_module.dumps({'type': 'tool_start', 'tool': event.get('name', '?')}, ensure_ascii=False)}\\\\n\\\\n"
+                    elif kind == "on_tool_end":
+                        yield f"data: {json_module.dumps({'type': 'tool_end', 'tool': event.get('name', '?')}, ensure_ascii=False)}\\\\n\\\\n"
+            except Exception as e:
+                yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)[:200]}, ensure_ascii=False)}\\\\n\\\\n"
+            yield f"data: {json_module.dumps({'type': 'done', 'session_id': session_id}, ensure_ascii=False)}\\\\n\\\\n"
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    except Exception as e:
+        logger.exception(f"多模态处理失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── 文档管理接口 ──────────────────────────────────────────────

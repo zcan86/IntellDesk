@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="IntelliDesk — 多智能体电商客服",
-    version="3.1.0",
+    version="3.2.0",
     lifespan=lifespan,
 )
 

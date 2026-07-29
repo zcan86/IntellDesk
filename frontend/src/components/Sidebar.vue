@@ -56,7 +56,7 @@ onMounted(loadSessions)
       </div>
       <div v-if="!sessions.length" class="empty-hint">暂无历史对话</div>
     </div>
-    <div class="sidebar-footer">v3.1.0</div>
+    <div class="sidebar-footer">v3.2.0</div>
   </aside>
 </template>
 
