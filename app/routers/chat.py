@@ -14,7 +14,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from loguru import logger
 
+import asyncio
+
 from app.agent import create_intellidesk_agent
+from app.config import settings
 from app.rag.loader import build_index, get_index_status
 from app.tools.knowledge_search import search_knowledge_base
 from app.tools.builtin_tools import get_weather, calculator, get_current_time
@@ -45,24 +48,30 @@ _agent = None
 
 
 def get_agent():
-    """延迟初始化 Agent（含全部 4 个工具 + MemorySaver）"""
+    """延迟初始化 Agent
+
+    USE_MCP=true  → 连接 MCP Server 动态加载工具
+    USE_MCP=false → 直接 import 本地工具（默认）
+    """
     global _agent
     if _agent is None:
-        logger.info("正在初始化 IntelliDesk Agent...")
-        _agent = create_intellidesk_agent(
-            tools=[
-                search_knowledge_base,
-                get_weather,
-                calculator,
-                get_current_time,
-            ]
-        )
-        logger.info("Agent 初始化完成（含 MemorySaver + 4 工具）")
+        if settings.USE_MCP:
+            logger.info("正在初始化 Agent（MCP 模式）...")
+            from app.mcp_client import load_mcp_tools
+            tools = asyncio.run(load_mcp_tools())
+            _agent = create_intellidesk_agent(tools=tools)
+            logger.info(f"Agent 就绪（MCP: {len(tools)} 工具）")
+        else:
+            logger.info("正在初始化 Agent（直接模式）...")
+            _agent = create_intellidesk_agent(
+                tools=[search_knowledge_base, get_weather, calculator, get_current_time]
+            )
+            logger.info("Agent 就绪（直接: 4 工具）")
     return _agent
 
 
 def reset_agent():
-    """重置 Agent（索引重建后调用）"""
+    """重置 Agent"""
     global _agent
     _agent = None
     logger.info("Agent 已重置")

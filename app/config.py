@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     AGENT_TEMPERATURE: float = Field(0.7, description="Agent LLM 温度")
     AGENT_MAX_ITERATIONS: int = Field(5, description="Agent 最大工具调用轮数")
 
+    # ================== MCP ====================
+    USE_MCP: bool = Field(False, description="是否启用 MCP 模式（工具通过 MCP Server 加载）")
+
     model_config = ConfigDict(
         env_file=ENV_FILE,
         env_prefix="",
