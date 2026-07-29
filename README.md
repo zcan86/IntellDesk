@@ -13,7 +13,7 @@
 启动后在浏览器打开 `http://localhost:8000`：
 
 - 💬 **自然语言对话**：用户用中文提问，Agent 理解意图后回复
-- 📚 **RAG 知识库检索**：上传产品文档，Agent 基于文档回答（不编造）
+- 📚 **Adaptive-RAG 检索**：混合检索（BM25 + BGE-m3）+ RRF 融合 + LLM Rerank + Self-RAG 反思
 - 🔧 **多工具调用**：自动路由到天气查询、数学计算、时间查询等工具
 - ⚡ **SSE 流式输出**：打字机效果，工具调用过程实时可见
 - 🧠 **多轮对话记忆**：跨轮记住上下文，支持追问和澄清
@@ -52,7 +52,7 @@
 | 前端 | HTML5 + CSS3 + Vanilla JS | 零框架，纯原生实现 |
 | 后端 | FastAPI + Pydantic | 异步 HTTP 服务 |
 | Agent | LangChain + LangGraph | ReAct Agent + MemorySaver |
-| 检索 | ChromaDB + 硅基流动 BGE-m3 | 1024 维语义向量，支持中英文同义词/近义改写 |
+| 检索 | Adaptive-RAG (ChromaDB + BGE-m3 + BM25 + RRF + LLM Rerank) | 混合检索融合 + 重排序 + Self-RAG 反思 |
 | 工具协议 | **MCP** (Model Context Protocol) | HTTP transport，工具可独立部署为 McpToolServer |
 | LLM | DeepSeek Chat (OpenAI 兼容) | 可替换为任意兼容服务 |
 
@@ -200,6 +200,7 @@ pytest tests/test_api.py -v
 - [x] 阶段 6：测试 + Docker 部署
 - [x] 优化：Embedding 升级为 ChromaDB + 硅基流动 BGE-m3 语义检索
 - [x] 优化：MCP 协议集成 + 工具服务独立化（McpToolServer）
+- [x] 优化：Adaptive-RAG 混合检索 + RRF 融合 + LLM Rerank + Self-RAG
 - [ ] 优化：工具调用迭代次数限制
 - [ ] 优化：企业微信 / 飞书 Bot 接入
 
