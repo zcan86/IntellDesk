@@ -1,6 +1,6 @@
 # 🤖 IntelliDesk — 智能客服 Agent
 
-基于 **LangGraph Agent + MCP 协议 + ChromaDB 语义检索 + 多工具调用** 的 SaaS 产品智能客服系统。支持直接调用/MCP/远程 MCP 三种工具模式自由切换。
+基于 **LangGraph 多智能体 + Adaptive-RAG + MCP 协议 + 电商工具链** 的电商智能客服系统。7 类意图自动路由，8 个工具覆盖订单/物流/退换货/商品推荐全场景。
 
 用户输入自然语言问题 → Agent 自主判断意图 → 检索知识库或调用外部工具 → SSE 流式返回答案。
 
@@ -201,6 +201,7 @@ pytest tests/test_api.py -v
 - [x] 优化：Embedding 升级为 ChromaDB + 硅基流动 BGE-m3 语义检索
 - [x] 优化：MCP 协议集成 + 工具服务独立化（McpToolServer）
 - [x] 优化：Adaptive-RAG 混合检索 + RRF 融合 + LLM Rerank + Self-RAG
+- [x] 优化：专精为多智能体电商客服（意图路由 + 电商工具链 + 场景化知识库）
 - [ ] 优化：工具调用迭代次数限制
 - [ ] 优化：企业微信 / 飞书 Bot 接入
 
