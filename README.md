@@ -1,6 +1,6 @@
 # 🤖 IntelliDesk — 智能客服 Agent
 
-基于 **LangGraph Agent + ChromaDB 语义检索 + 多工具调用** 的 SaaS 产品智能客服系统。
+基于 **LangGraph Agent + MCP 协议 + ChromaDB 语义检索 + 多工具调用** 的 SaaS 产品智能客服系统。支持直接调用/MCP/远程 MCP 三种工具模式自由切换。
 
 用户输入自然语言问题 → Agent 自主判断意图 → 检索知识库或调用外部工具 → SSE 流式返回答案。
 
@@ -18,6 +18,7 @@
 - ⚡ **SSE 流式输出**：打字机效果，工具调用过程实时可见
 - 🧠 **多轮对话记忆**：跨轮记住上下文，支持追问和澄清
 - 📂 **历史会话管理**：侧边栏保存历史对话，可切换、删除
+- 🔌 **MCP 协议支持**：三种工具模式（直接/MCP本地/MCP远程），配置文件一键切换
 
 ---
 
@@ -52,6 +53,7 @@
 | 后端 | FastAPI + Pydantic | 异步 HTTP 服务 |
 | Agent | LangChain + LangGraph | ReAct Agent + MemorySaver |
 | 检索 | ChromaDB + 硅基流动 BGE-m3 | 1024 维语义向量，支持中英文同义词/近义改写 |
+| 工具协议 | **MCP** (Model Context Protocol) | HTTP transport，工具可独立部署为 McpToolServer |
 | LLM | DeepSeek Chat (OpenAI 兼容) | 可替换为任意兼容服务 |
 
 ---
@@ -197,8 +199,21 @@ pytest tests/test_api.py -v
 - [x] 阶段 5：前端聊天界面
 - [x] 阶段 6：测试 + Docker 部署
 - [x] 优化：Embedding 升级为 ChromaDB + 硅基流动 BGE-m3 语义检索
+- [x] 优化：MCP 协议集成 + 工具服务独立化（McpToolServer）
 - [ ] 优化：工具调用迭代次数限制
 - [ ] 优化：企业微信 / 飞书 Bot 接入
+
+---
+
+## MCP 工具模式
+
+| 模式 | `.env` 配置 | 说明 |
+|---|---|---|
+| 直接模式（默认） | `USE_MCP=false` | 工具代码在 `app/tools/`，import 即用 |
+| 本地 MCP | `USE_MCP=true` + `MCP_SERVER_URL=http://127.0.0.1:8100` | 工具由本地 McpToolServer 进程提供 |
+| 远程 MCP | `USE_MCP=true` + `MCP_SERVER_URL=http://公网IP:8100` | 工具部署在独立云服务器 |
+
+McpToolServer 独立项目：[McpToolServer](https://github.com/zcan86/McpToolServer) — 可被任何 Agent（Coze、Claude Desktop 等）复用。
 
 ---
 
