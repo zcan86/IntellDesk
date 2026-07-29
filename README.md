@@ -112,6 +112,7 @@ Docker: `docker compose up -d`
 - [x] Adaptive-RAG 混合检索 + 重排序
 - [x] 多智能体电商客服（意图路由 + 电商工具链）
 - [x] 前端重构 Vue 3 + Element Plus + TypeScript
+- [x] 多 Agent 调度可视化（Orchestrator + SSE agent_start/agent_end + 前端展示）
 
 ---
 
