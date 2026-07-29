@@ -57,6 +57,16 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8100", description="远程 MCP Server 地址"
     )
 
+    # ================== VLM 多模态 ====================
+    VLM_API_KEY: str = Field("", description="VLM 图片识别 API Key（阿里百炼）")
+    VLM_BASE_URL: str = Field(
+        "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        description="VLM API 地址（阿里百炼）",
+    )
+    VLM_MODEL_NAME: str = Field(
+        "qwen-vl-max", description="VLM 模型名"
+    )
+
     model_config = ConfigDict(
         env_file=ENV_FILE,
         env_prefix="",

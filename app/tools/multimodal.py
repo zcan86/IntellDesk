@@ -12,17 +12,39 @@ from langchain.tools import tool
 from loguru import logger
 from app.config import settings
 
-_client: OpenAI | None = None
+_vlm_client: OpenAI | None = None
+_embedding_client: OpenAI | None = None
 
 
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(
+def _get_vlm_client() -> OpenAI:
+    """VLM 图片识别客户端（阿里百炼优先，硅基流动兜底）"""
+    global _vlm_client
+    if _vlm_client is None:
+        if settings.VLM_API_KEY:
+            # 用户配置了 VLM Key → 用阿里百炼
+            _vlm_client = OpenAI(
+                api_key=settings.VLM_API_KEY,
+                base_url=settings.VLM_BASE_URL,
+            )
+            logger.info("VLM: 阿里百炼模式")
+        else:
+            # 未配置 → 用硅基流动兜底
+            _vlm_client = OpenAI(
+                api_key=settings.EMBEDDING_API_KEY,
+                base_url=settings.EMBEDDING_BASE_URL,
+            )
+            logger.info("VLM: 硅基流动模式（VL模型可能不可用，建议配置 VLM_API_KEY）")
+    return _vlm_client
+
+
+def _get_embedding_client() -> OpenAI:
+    global _embedding_client
+    if _embedding_client is None:
+        _embedding_client = OpenAI(
             api_key=settings.EMBEDDING_API_KEY,
             base_url=settings.EMBEDDING_BASE_URL,
         )
-    return _client
+    return _embedding_client
 
 
 @tool
@@ -38,9 +60,16 @@ def recognize_image(image_path: str) -> str:
     logger.info(f"图片识别: {image_path[:80]}...")
 
     try:
-        client = _get_client()
+        client = _get_vlm_client()
 
-        # 本地文件 → base64
+        # 根据配置选择模型：有 VLM_API_KEY → 阿里百炼 qwen-vl-max，否则硅基流动 VLM
+        if settings.VLM_API_KEY:
+            vlm_models = [settings.VLM_MODEL_NAME]  # 阿里百炼: qwen-vl-max
+        else:
+            vlm_models = [
+                "Qwen/Qwen2.5-VL-72B-Instruct",
+                "Qwen/Qwen2-VL-72B-Instruct",
+            ]  # 硅基流动（可能被禁用）
         if not image_path.startswith("http"):
             p = Path(image_path)
             if not p.exists():
@@ -106,7 +135,7 @@ def transcribe_audio(audio_path: str) -> str:
         if not p.exists():
             return "音频文件不存在，请重新上传。"
 
-        client = _get_client()
+        client = _get_embedding_client()
         with open(p, "rb") as f:
             resp = client.audio.transcriptions.create(
                 model="whisper-1",
