@@ -80,12 +80,7 @@ def recognize_image(image_path: str) -> str:
         else:
             img_url = image_path
 
-        # 尝试 VLM 模型（优先级：Qwen-VL → 降级提示）
-        vlm_models = [
-            "Qwen/Qwen2.5-VL-72B-Instruct",
-            "Qwen/Qwen2-VL-72B-Instruct",
-            "Pro/Qwen/Qwen2-VL-7B-Instruct",
-        ]
+        # 尝试 VLM 模型列表
         last_error = ""
         for model_name in vlm_models:
             try:
