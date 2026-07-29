@@ -14,8 +14,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from loguru import logger
 
-import asyncio
-
 from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
@@ -57,10 +55,16 @@ def get_agent():
     if _agent is None:
         if settings.USE_MCP:
             logger.info("正在初始化 Agent（MCP 模式）...")
-            from app.mcp_client import load_mcp_tools
-            tools = asyncio.run(load_mcp_tools())
-            _agent = create_intellidesk_agent(tools=tools)
-            logger.info(f"Agent 就绪（MCP: {len(tools)} 工具）")
+            from app.mcp_client import load_mcp_tools_sync
+            tools = load_mcp_tools_sync()
+            if not tools:
+                logger.warning("MCP 连接失败，降级为直接模式")
+                _agent = create_intellidesk_agent(
+                    tools=[search_knowledge_base, get_weather, calculator, get_current_time]
+                )
+            else:
+                _agent = create_intellidesk_agent(tools=tools)
+            logger.info(f"Agent 就绪（MCP: {len(tools)} 工具）" if tools else "Agent 就绪（直接降级: 4 工具）")
         else:
             logger.info("正在初始化 Agent（直接模式）...")
             _agent = create_intellidesk_agent(

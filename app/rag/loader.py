@@ -141,6 +141,14 @@ def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> boo
         collection_name="intellidesk_docs",
     )
     logger.info(f"  ChromaDB 索引就绪: {_vector_store._collection.count()} 个块, 持久化到 {persist_dir}")
+
+    # 3. 同步初始化 BM25 索引（用于混合检索）
+    try:
+        from app.rag.hybrid_retriever import init_hybrid_index
+        init_hybrid_index(contents)
+    except Exception as e:
+        logger.warning(f"  BM25 索引初始化失败（混合检索降级为纯语义）: {e}")
+
     return True
 
 

@@ -65,3 +65,14 @@ def load_mcp_tools(server_url: str | None = None) -> list:
 
     logger.info(f"  远程 MCP: 加载 {len(all_tools)} 个工具")
     return all_tools
+
+
+# ── 同步包装 ──────────────────────────────────────────────────
+
+def load_mcp_tools_sync(server_url: str | None = None) -> list:
+    """MCP 工具加载 — 同步版本
+
+    load_mcp_tools 本身就是同步的（httpx sync client），
+    这个别名用于明确区分同步/异步调用场景。
+    """
+    return load_mcp_tools(server_url)

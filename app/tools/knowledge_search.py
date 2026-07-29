@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""知识库检索 Tool
+"""知识库检索 Tool（v2 — Adaptive-RAG）
 
-将 RAG 检索能力封装为 LangChain Tool，
-Agent 在需要查询产品文档时自动调用。
+v1: 单一 ChromaDB 语义检索
+v2: Adaptive-RAG: 查询分析 → 混合检索 → RRF融合 → LLM Rerank → Self-RAG反思
 """
 
 from langchain.tools import tool
 from loguru import logger
 
-from app.rag.loader import search_knowledge
+from app.config import settings
+from app.rag.adaptive_rag import adaptive_search
 
 
 @tool
@@ -23,23 +24,22 @@ def search_knowledge_base(query: str) -> str:
     - 故障排查、常见问题
 
     Args:
-        query: 用自然语言描述的搜索查询，建议提炼用户问题的关键词
+        query: 用自然语言描述的搜索查询
 
     Returns:
-        知识库中相关的文档片段，包含来源文件名
+        知识库中相关的文档片段，已通过 Adaptive-RAG 优化排序
     """
-    logger.info(f"🔍 Agent 检索知识库: {query[:100]}...")
+    logger.info(f"🔍 Adaptive-RAG 检索: {query[:100]}...")
 
-    results = search_knowledge(query, top_k=3)
+    results = adaptive_search(query, top_k=settings.TOP_K_RETRIEVAL)
 
     if not results:
         return "知识库中未找到相关信息。请告知用户该问题暂时无法回答，建议联系人工客服。"
 
-    # 格式化为 Agent 可读的文本
     formatted = []
     for i, r in enumerate(results, 1):
-        source = r["source"]
-        section = f"{r['h1']} > {r['h2']}" if r["h2"] else r["h1"]
+        source = r.get("source", "unknown")
+        section = f"{r.get('h1', '')} > {r.get('h2', '')}" if r.get("h2") else r.get("h1", "")
         formatted.append(
             f"【来源 {i}】{source} | 章节：{section}\n{r['content']}"
         )
