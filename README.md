@@ -43,7 +43,7 @@
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | HTML5 + CSS3 + Vanilla JS |
+| 前端 | Vue 3 + TypeScript + Element Plus + Vite |
 | 后端 | FastAPI + Pydantic |
 | 多 Agent | LangGraph + 意图路由 (7 类) |
 | 检索 | Adaptive-RAG (BM25 + BGE-m3 + RRF + LLM Rerank + Self-RAG) |
@@ -87,7 +87,8 @@ Docker: `docker compose up -d`
 │   │   ├── ecommerce.py      # 订单/物流/退换货/商品 Tool
 │   │   └── builtin_tools.py  # 天气/计算/时间 Tool
 │   └── mcp_client.py         # MCP 远程连接器
-├── static/                   # 纯原生前端
+├── frontend/                 # Vue 3 + Element Plus 前端源码
+├── static/                   # 前端构建产物
 ├── docs/
 │   ├── knowledge/            # 9 份知识点文档
 │   └── products/             # 电商知识库（退换货/配送/商品/FAQ）
@@ -110,6 +111,7 @@ Docker: `docker compose up -d`
 - [x] MCP 协议集成 + McpToolServer
 - [x] Adaptive-RAG 混合检索 + 重排序
 - [x] 多智能体电商客服（意图路由 + 电商工具链）
+- [x] 前端重构 Vue 3 + Element Plus + TypeScript
 
 ---
 
