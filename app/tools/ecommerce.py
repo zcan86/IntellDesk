@@ -135,12 +135,30 @@ def product_search(keyword: str) -> str:
     # 关键词匹配
     kw = keyword.lower()
     results = []
-    for idx, (name, price, tags, img) in catalog.items():
-        if kw in name.lower() or any(t in name.lower() for t in kw.split()) or kw in tags:
-            results.append((idx, name, price, tags, img))
+
+    # 品类映射
+    category_map = {
+        "跑步": [5, 6], "篮球": [4], "气垫": [1, 8],
+        "休闲": [1, 2, 3, 7], "运动": [1, 2, 3, 4, 5, 6, 7, 8],
+        "复古": [7], "经典": [2, 7], "潮流": [3],
+        "白色": [2], "黑色": [3], "银色": [1],
+        "便宜": [3, 7], "贵": [4, 5], "专业": [5],
+    }
+
+    matched_ids = set()
+    for cat, ids in category_map.items():
+        if cat in kw:
+            matched_ids.update(ids)
+
+    if matched_ids:
+        results = [(idx, *catalog[idx]) for idx in matched_ids]
+    else:
+        for idx, (name, price, tags, img) in catalog.items():
+            if kw in name.lower() or any(t in name.lower() for t in kw.split()) or kw in tags:
+                results.append((idx, name, price, tags, img))
 
     if not results:
-        results = list(catalog.values())  # 无匹配则返回全部
+        results = [(idx, *catalog[idx]) for idx in catalog]
 
     lines = [f"🔍 「{keyword}」搜索结果："]
     for idx, name, price, tags, img in results[:5]:
