@@ -19,6 +19,7 @@ from app.config import settings
 from app.rag.loader import build_index, get_index_status
 from app.tools.knowledge_search import search_knowledge_base
 from app.tools.builtin_tools import get_weather, calculator, get_current_time
+from app.tools.ecommerce import query_order, track_delivery, return_guide, product_search
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -60,7 +61,8 @@ def get_agent():
             if not tools:
                 logger.warning("MCP 连接失败，降级为直接模式")
                 _agent = create_intellidesk_agent(
-                    tools=[search_knowledge_base, get_weather, calculator, get_current_time]
+                    tools=[search_knowledge_base, query_order, track_delivery,
+                           return_guide, product_search, get_weather, calculator, get_current_time]
                 )
             else:
                 _agent = create_intellidesk_agent(tools=tools)
@@ -68,9 +70,18 @@ def get_agent():
         else:
             logger.info("正在初始化 Agent（直接模式）...")
             _agent = create_intellidesk_agent(
-                tools=[search_knowledge_base, get_weather, calculator, get_current_time]
+                tools=[
+                    search_knowledge_base,  # 知识库检索
+                    query_order,            # 订单查询
+                    track_delivery,         # 物流跟踪
+                    return_guide,           # 退换货指引
+                    product_search,         # 商品搜索
+                    get_weather,            # 天气
+                    calculator,             # 计算器
+                    get_current_time,       # 时间
+                ]
             )
-            logger.info("Agent 就绪（直接: 4 工具）")
+            logger.info("Agent 就绪（直接: 8 工具）")
     return _agent
 
 
