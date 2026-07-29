@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="速购电商 — 多智能体客服",
-    version="3.0.0",
+    version="3.1.0",
     lifespan=lifespan,
 )
 
@@ -63,8 +63,8 @@ app.include_router(chat.router)
 # ── 静态文件 & SPA ──────────────────────────────────────────
 STATIC_DIR = Path(__file__).parent / "static"
 
-# 挂载 /static 目录，让 CSS/JS 可被浏览器加载
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+# 挂载静态资源（Vue 构建产物）
+app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
 
 @app.get("/")
