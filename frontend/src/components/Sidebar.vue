@@ -41,7 +41,7 @@ onMounted(loadSessions)
 
 <template>
   <aside class="sidebar" :class="{ collapsed }">
-    <div class="sidebar-header"><span class="logo">🛒 速购电商</span></div>
+    <div class="sidebar-header"><span class="logo">🛒 IntelliDesk</span></div>
     <el-button :icon="Plus" class="new-chat-btn" @click="newChat">新对话</el-button>
     <div class="history-list">
       <div

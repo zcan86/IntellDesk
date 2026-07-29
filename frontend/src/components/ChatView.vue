@@ -34,7 +34,7 @@ function onKeydown(e: KeyboardEvent) {
   <div class="chat-view">
     <header class="topbar">
       <el-button :icon="Fold" text @click="emit('toggleSidebar')" />
-      <h1>速购电商 智能客服</h1>
+      <h1>IntelliDesk 智能客服</h1>
       <span class="status" :class="{ streaming: isStreaming }">{{ isStreaming ? 'thinking...' : 'ready' }}</span>
     </header>
     <div class="messages" ref="msgContainer">

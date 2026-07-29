@@ -12,7 +12,7 @@ const suggestions = [
   <div class="welcome">
     <div class="icon">shopping_cart</div>
     <h2>你好！我是小速</h2>
-    <p>速购电商智能客服。你可以问我：</p>
+    <p>IntelliDesk智能客服。你可以问我：</p>
     <div class="suggestions">
       <el-button v-for="s in suggestions" :key="s" class="suggestion" round @click="emit('suggestion', s)">{{ s }}</el-button>
     </div>

@@ -1,4 +1,4 @@
-# 🛒 速购电商 — 多智能体客服 Agent
+# 🤖 IntelliDesk — 多智能体电商客服 Agent
 
 基于 **LangGraph 多智能体 + Adaptive-RAG + MCP 协议 + 电商工具链** 的电商智能客服系统。
 
