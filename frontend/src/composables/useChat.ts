@@ -2,12 +2,13 @@ import { ref } from 'vue'
 import { marked } from 'marked'
 marked.setOptions({ breaks: true, gfm: true })
 
-export interface ChatMessage { role: 'user' | 'agent'; content: string; toolStatus?: string }
+export interface ChatMessage { role: 'user' | 'agent' | 'system'; content: string; toolStatus?: string; agentName?: string }
 
 export function useChat() {
   const messages = ref<ChatMessage[]>([])
   const isStreaming = ref(false)
   const sessionId = ref<string | null>(null)
+  const currentAgent = ref('')
 
   function addUserMessage(text: string) { messages.value.push({ role: 'user', content: text }) }
   function addAgentPlaceholder() { messages.value.push({ role: 'agent', content: '', toolStatus: '' }) }
@@ -51,7 +52,9 @@ export function useChat() {
           if (!line.startsWith('data: ')) continue
           try {
             const evt = JSON.parse(line.slice(6))
-            if (evt.type === 'token') appendToken(evt.content)
+            if (evt.type === 'agent_start') { currentAgent.value = evt.agent; messages.value.push({ role: 'system', content: evt.agent + ' 处理中...', agentName: evt.agent }) }
+            else if (evt.type === 'agent_end') { currentAgent.value = '' }
+            else if (evt.type === 'token') appendToken(evt.content)
             else if (evt.type === 'tool_start') showTool(evt.tool)
             else if (evt.type === 'tool_end') hideTool()
             else if (evt.type === 'done') { finalizeAgent(); if (evt.session_id && !sessionId.value) sessionId.value = evt.session_id }
@@ -64,5 +67,5 @@ export function useChat() {
 
   function clearMessages() { messages.value = []; sessionId.value = null }
   function renderMarkdown(text: string) { return marked.parse(text) }
-  return { messages, isStreaming, sessionId, sendMessage, clearMessages, renderMarkdown }
+  return { messages, isStreaming, sessionId, currentAgent, sendMessage, clearMessages, renderMarkdown }
 }

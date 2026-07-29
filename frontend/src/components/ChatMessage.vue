@@ -13,7 +13,7 @@ const htmlContent = computed(() => renderMarkdown(props.message.content))
     <div v-if="message.role === 'agent' && message.toolStatus" class="tool-status">
       <span class="spinner" /> {{ message.toolStatus }}
     </div>
-    <div class="message" :class="message.role">
+    <div class="message" :class="[message.role, { clickable: message.role === 'system' }]">
       <div class="avatar">{{ message.role === 'user' ? 'U' : 'AI' }}</div>
       <div class="bubble" v-html="htmlContent" :class="{ 'cursor-blink': isLast && isStreaming && !message.content }" />
     </div>
