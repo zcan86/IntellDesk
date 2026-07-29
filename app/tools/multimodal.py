@@ -40,7 +40,7 @@ def recognize_image(image_path: str) -> str:
     try:
         client = _get_client()
 
-        # 如果是本地文件，转 base64
+        # 本地文件 → base64
         if not image_path.startswith("http"):
             p = Path(image_path)
             if not p.exists():
@@ -51,25 +51,39 @@ def recognize_image(image_path: str) -> str:
         else:
             img_url = image_path
 
-        resp = client.chat.completions.create(
-            model="Qwen/Qwen2.5-VL-72B-Instruct",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": img_url}},
-                    {"type": "text", "text": (
-                        "请识别这张图片中的商品信息。返回：\n"
-                        "1. 商品名称/品牌\n"
-                        "2. 品类（如运动鞋/手机/T恤等）\n"
-                        "3. 主要特征（颜色/材质/型号等）\n"
-                        "如果图片中没有商品，请说明。"
-                    )},
-                ],
-            }],
-            max_tokens=500,
-            timeout=30,
+        # 尝试 VLM 模型（优先级：Qwen-VL → 降级提示）
+        vlm_models = [
+            "Qwen/Qwen2.5-VL-72B-Instruct",
+            "Qwen/Qwen2-VL-72B-Instruct",
+            "Pro/Qwen/Qwen2-VL-7B-Instruct",
+        ]
+        last_error = ""
+        for model_name in vlm_models:
+            try:
+                resp = client.chat.completions.create(
+                    model=model_name,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": img_url}},
+                            {"type": "text", "text": "请识别这张图片中的商品信息。返回商品名称、品类、主要特征。如果图片中没有商品请说明。"},
+                        ],
+                    }],
+                    max_tokens=300,
+                    timeout=20,
+                )
+                logger.info(f"VLM 模型: {model_name}")
+                return resp.choices[0].message.content.strip()
+            except Exception as e:
+                last_error = str(e)[:100]
+                continue
+
+        # 所有 VLM 不可用 → 降级
+        logger.warning(f"所有 VLM 模型不可用: {last_error}")
+        return (
+            "[图片识别暂不可用] 我已收到你上传的图片，但视觉模型当前不可用。\n"
+            "请用文字描述图片内容（如：这是一双Nike运动鞋，白色款），我会根据你的描述来帮你。"
         )
-        return resp.choices[0].message.content.strip()
 
     except Exception as e:
         logger.error(f"图片识别失败: {e}")
