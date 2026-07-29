@@ -1,10 +1,10 @@
 <script setup lang="ts">
 const emit = defineEmits<{ suggestion: [msg: string] }>()
 const suggestions = [
-  '帮我查一下订单 DD20240001',
+  '推荐一款跑步鞋',
+  'Air Force 1 多少钱？',
   '退货流程是怎样的？',
-  '有没有蓝牙耳机推荐？',
-  '满多少包邮？',
+  '帮我查一下订单 DD20240001',
 ]
 </script>
 

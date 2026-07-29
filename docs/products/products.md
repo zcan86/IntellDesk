@@ -1,39 +1,35 @@
-# 速购电商 — 商品分类
+# 耐克官方旗舰店 — 商品目录
 
-> 最后更新：2025-07-01
+## 热销鞋款
 
----
+| 编号 | 商品名称 | 价格 | 图片路径 |
+|---|---|---|---|
+| 1 | Nike Air Max 97 银色子弹 | ¥1,199 | data/product_images/1.jpg |
+| 2 | Nike Air Force 1 '07 白色 | ¥899 | data/product_images/2.jpg |
+| 3 | Nike Dunk Low Retro 熊猫 | ¥799 | data/product_images/3.jpg |
+| 4 | Nike Air Jordan 1 Retro High OG | ¥1,499 | data/product_images/4.jpg |
+| 5 | Nike ZoomX Vaporfly 3 竞速 | ¥2,599 | data/product_images/5.jpg |
+| 6 | Nike React Infinity Run 4 | ¥1,099 | data/product_images/6.jpg |
+| 7 | Nike Blazer Mid '77 Vintage | ¥749 | data/product_images/7.jpg |
+| 8 | Nike Air Max 270 React | ¥1,299 | data/product_images/8.jpg |
 
-## 主营品类
+## 按品类
 
-| 品类 | 代表商品 | 价 格区间 |
-|---|---|---|
-| 数码电子 | 手机、耳机、充电器、数据线 | ¥29-¥8999 |
-| 服装鞋帽 | T恤、牛仔裤、运动鞋、羽绒服 | ¥39-¥899 |
-| 家居生活 | 床品、收纳、清洁工具、装饰 | ¥9.9-¥599 |
-| 食品饮料 | 零食、茶叶、冲饮、坚果 | ¥9.9-¥299 |
-| 美妆个护 | 洗面奶、面膜、防晒、口红 | ¥19-¥499 |
+| 品类 | 款式 |
+|---|---|
+| 运动休闲 | Air Force 1、Dunk Low、Blazer Mid |
+| 跑步鞋 | Vaporfly 3、React Infinity Run 4 |
+| 篮球鞋 | Air Jordan 1 Retro High OG |
+| 气垫鞋 | Air Max 97、Air Max 270 React |
 
-## 热销商品 TOP 5
+## 按价格
 
-1. 蓝牙降噪耳机 Pro — ¥299
-2. 纯棉短袖 T 恤 — ¥59
-3. 不锈钢保温杯 500ml — ¥89
-4. 无线充电器 15W — ¥69
-5. 坚果礼盒 1.2kg — ¥129
+| 价位 | 款式 |
+|---|---|
+| 500-999 | Air Force 1(899)、Dunk Low(799)、Blazer Mid(749) |
+| 1000-1499 | Air Max 97(1199)、React Infinity(1099)、Air Max 270(1299) |
+| 1500+ | Air Jordan 1(1499)、Vaporfly 3(2599) |
 
-## 会员权益
+## 尺码
 
-| 等级 | 条件 | 权益 |
-|---|---|---|
-| 普通会员 | 注册即享 | 满 ¥99 包邮 |
-| 银卡会员 | 年消费 ¥2000+ | 9.5 折 + 优先发货 |
-| 金卡会员 | 年消费 ¥5000+ | 9 折 + 专属客服 + 免运费 |
-| 钻石会员 | 年消费 ¥10000+ | 8.5 折 + 专属客服 + 免运费 + 生日礼 |
-
-## 促销活动
-
-- **新人专享**：首单满 ¥50 减 ¥10
-- **限时秒杀**：每天 10:00/15:00/20:00 三场
-- **满减优惠**：满 ¥199 减 ¥20，满 ¥399 减 ¥50
-- **会员日**：每月 18 日，会员专享额外 9 折
+EU 36-44，男女款均有。具体款式库存以实际查询为准。

@@ -114,34 +114,39 @@ def return_guide(reason: str = "") -> str:
 
 @tool
 def product_search(keyword: str) -> str:
-    """搜索商品。当用户询问有没有某商品、推荐某类商品时调用。
+    """搜索耐克鞋款。当用户询问鞋子、运动鞋、推荐鞋款时调用。
 
     Args:
-        keyword: 搜索关键词
+        keyword: 搜索关键词（如 Air Max/跑步/篮球/白色/便宜 等）
     """
     logger.info(f"🔍 商品搜索: {keyword}")
 
     catalog = {
-        "耳机": [("蓝牙降噪耳机 Pro", 299, "热销 TOP1"), ("有线入耳式耳机", 49, "性价比高")],
-        "T恤": [("纯棉短袖T恤", 59, "热销 TOP2")],
-        "充电": [("无线充电器 15W", 69, "热销 TOP4"), ("快充数据线 1m", 19, "必备配件")],
-        "保温杯": [("不锈钢保温杯 500ml", 89, "热销 TOP3")],
-        "坚果": [("坚果礼盒 1.2kg", 129, "送礼推荐")],
-        "面膜": [("保湿补水面膜 10片装", 49, "好评如潮")],
+        1:  ("Nike Air Max 97 银色子弹", 1199, "气垫鞋/运动休闲", "data/product_images/1.jpg"),
+        2:  ("Nike Air Force 1 '07 白色", 899, "运动休闲/百搭经典", "data/product_images/2.jpg"),
+        3:  ("Nike Dunk Low Retro 熊猫", 799, "运动休闲/潮流", "data/product_images/3.jpg"),
+        4:  ("Nike Air Jordan 1 Retro High OG", 1499, "篮球鞋/收藏级", "data/product_images/4.jpg"),
+        5:  ("Nike ZoomX Vaporfly 3 竞速", 2599, "跑步鞋/专业竞速", "data/product_images/5.jpg"),
+        6:  ("Nike React Infinity Run 4", 1099, "跑步鞋/日常训练", "data/product_images/6.jpg"),
+        7:  ("Nike Blazer Mid '77 Vintage", 749, "运动休闲/复古", "data/product_images/7.jpg"),
+        8:  ("Nike Air Max 270 React", 1299, "气垫鞋/舒适", "data/product_images/8.jpg"),
     }
 
+    # 关键词匹配
+    kw = keyword.lower()
     results = []
-    for k, items in catalog.items():
-        if keyword in k or k in keyword:
-            results.extend(items)
+    for idx, (name, price, tags, img) in catalog.items():
+        if kw in name.lower() or any(t in name.lower() for t in kw.split()) or kw in tags:
+            results.append((idx, name, price, tags, img))
 
     if not results:
-        return f"未找到与「{keyword}」相关的商品。建议尝试其他关键词，或联系人工客服获取帮助。"
+        results = list(catalog.values())  # 无匹配则返回全部
 
     lines = [f"🔍 「{keyword}」搜索结果："]
-    for name, price, tag in results:
-        lines.append(f"  - {name}  ¥{price}  ({tag})")
+    for idx, name, price, tags, img in results[:5]:
+        lines.append(f"  #{idx} {name} — ¥{price} ({tags})")
     return "\n".join(lines)
+
 
 
 def _estimate_delivery(order_date: str, status: str) -> str:
