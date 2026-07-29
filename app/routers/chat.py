@@ -295,8 +295,12 @@ async def upload_and_chat(
         session_id = session_id or str(uuid.uuid4())
         config = {"configurable": {"thread_id": session_id}}
 
+        def sse(data: dict) -> str:
+            """生成 SSE 格式字符串"""
+            return f"data: {json_module.dumps(data, ensure_ascii=False)}\n\n"
+
         async def event_generator():
-            yield f"data: {json_module.dumps({'type': 'token', 'content': f'[{msg_type}] {file.filename}\\\\n'}, ensure_ascii=False)}\\\\n\\\\n"
+            yield sse({"type": "token", "content": f"[{msg_type}] {file.filename}\n"})
             try:
                 async for event in agent.astream_events(
                     {"messages": [("user", full_msg)]}, config=config, version="v2"
@@ -305,14 +309,14 @@ async def upload_and_chat(
                     if kind == "on_chat_model_stream":
                         chunk = event.get("data", {}).get("chunk")
                         if chunk and hasattr(chunk, "content") and chunk.content:
-                            yield f"data: {json_module.dumps({'type': 'token', 'content': chunk.content}, ensure_ascii=False)}\\\\n\\\\n"
+                            yield sse({"type": "token", "content": chunk.content})
                     elif kind == "on_tool_start":
-                        yield f"data: {json_module.dumps({'type': 'tool_start', 'tool': event.get('name', '?')}, ensure_ascii=False)}\\\\n\\\\n"
+                        yield sse({"type": "tool_start", "tool": event.get("name", "?")})
                     elif kind == "on_tool_end":
-                        yield f"data: {json_module.dumps({'type': 'tool_end', 'tool': event.get('name', '?')}, ensure_ascii=False)}\\\\n\\\\n"
+                        yield sse({"type": "tool_end", "tool": event.get("name", "?")})
             except Exception as e:
-                yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)[:200]}, ensure_ascii=False)}\\\\n\\\\n"
-            yield f"data: {json_module.dumps({'type': 'done', 'session_id': session_id}, ensure_ascii=False)}\\\\n\\\\n"
+                yield sse({"type": "error", "message": str(e)[:200]})
+            yield sse({"type": "done", "session_id": session_id})
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
