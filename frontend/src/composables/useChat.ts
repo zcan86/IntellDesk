@@ -36,10 +36,12 @@ export function useChat() {
   }
 
   async function sendMessage(text: string) {
-    console.log('[useChat] sendMessage:', text, 'streaming:', isStreaming.value)
-    if (isStreaming.value) return
-    isStreaming.value = true; addUserMessage(text); addAgentPlaceholder()
-    console.log('[useChat] fetching /api/chat/stream...')
+    console.log('[useChat] sendMessage:', text)
+    if (isStreaming.value) { console.log('[useChat] blocked: already streaming'); return }
+    isStreaming.value = true
+    try { addUserMessage(text) } catch(e) { console.error('[useChat] addUserMessage error:', e) }
+    try { addAgentPlaceholder() } catch(e) { console.error('[useChat] addAgentPlaceholder error:', e) }
+    console.log('[useChat] fetching...')
     try {
       const resp = await fetch('/api/chat/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
