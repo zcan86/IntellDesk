@@ -36,8 +36,10 @@ export function useChat() {
   }
 
   async function sendMessage(text: string) {
+    console.log('[useChat] sendMessage:', text, 'streaming:', isStreaming.value)
     if (isStreaming.value) return
     isStreaming.value = true; addUserMessage(text); addAgentPlaceholder()
+    console.log('[useChat] fetching /api/chat/stream...')
     try {
       const resp = await fetch('/api/chat/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
