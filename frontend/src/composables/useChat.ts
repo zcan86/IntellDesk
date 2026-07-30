@@ -47,13 +47,16 @@ export function useChat() {
       })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
+      console.log('[useChat] reader started')
       while (true) {
-        const { done, value } = await reader.read(); if (done) break
+        const { done, value } = await reader.read(); if (done) { console.log('[useChat] reader done'); break }
         buf += decoder.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop() || ''
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
+          console.log('[useChat] SSE line:', line.substring(0, 80))
           try {
             const evt = JSON.parse(line.slice(6))
+            console.log('[useChat] SSE event:', evt.type)
             if (evt.type === 'agent_start') { currentAgent.value = evt.agent; messages.value.push({ role: 'system', content: evt.agent + ' 处理中...', agentName: evt.agent }) }
             else if (evt.type === 'agent_end') { currentAgent.value = '' }
             else if (evt.type === 'token') appendToken(evt.content)
@@ -82,8 +85,9 @@ export function useChat() {
       const resp = await fetch('/api/chat/upload', { method: 'POST', body: form })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
+      console.log('[useChat] multimodal reader started')
       while (true) {
-        const { done, value } = await reader.read(); if (done) break
+        const { done, value } = await reader.read(); if (done) { console.log('[useChat] multimodal reader done'); break }
         buf += decoder.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop() || ''
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
