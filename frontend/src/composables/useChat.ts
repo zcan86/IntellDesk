@@ -59,8 +59,8 @@ export function useChat() {
           try {
             const evt = JSON.parse(line.slice(6))
             console.log('[useChat] SSE event:', evt.type)
-            if (evt.type === 'agent_start') { currentAgent.value = evt.agent; messages.value.push({ role: 'system', content: evt.agent + ' 处理中...', agentName: evt.agent }) }
-            else if (evt.type === 'agent_end') { currentAgent.value = '' }
+            if (evt.type === 'agent_start') { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = evt.agent; currentAgent.value = evt.agent }
+            else if (evt.type === 'agent_end') { if (currentAgent.value) { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = ''; } currentAgent.value = '' }
             else if (evt.type === 'token') appendToken(evt.content)
             else if (evt.type === 'tool_start') showTool(evt.tool)
             else if (evt.type === 'tool_end') hideTool()
