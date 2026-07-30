@@ -36,12 +36,10 @@ export function useChat() {
   }
 
   async function sendMessage(text: string) {
-    console.log('[useChat] sendMessage:', text)
-    if (isStreaming.value) { console.log('[useChat] blocked: already streaming'); return }
+    if (isStreaming.value) return
     isStreaming.value = true
-    try { addUserMessage(text) } catch(e) { console.error('[useChat] addUserMessage error:', e) }
-    try { addAgentPlaceholder() } catch(e) { console.error('[useChat] addAgentPlaceholder error:', e) }
-    console.log('[useChat] fetching...')
+    addUserMessage(text)
+    addAgentPlaceholder()
     try {
       const resp = await fetch('/api/chat/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -49,16 +47,13 @@ export function useChat() {
       })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
-      console.log('[useChat] reader started')
       while (true) {
-        const { done, value } = await reader.read(); if (done) { console.log('[useChat] reader done'); break }
+        const { done, value } = await reader.read(); if (done) break
         buf += decoder.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop() || ''
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          console.log('[useChat] SSE line:', line.substring(0, 80))
           try {
             const evt = JSON.parse(line.slice(6))
-            console.log('[useChat] SSE event:', evt.type)
             if (evt.type === 'agent_start') { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = evt.agent; currentAgent.value = evt.agent }
             else if (evt.type === 'agent_end') { if (currentAgent.value) { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = ''; } currentAgent.value = '' }
             else if (evt.type === 'token') appendToken(evt.content)
@@ -87,9 +82,8 @@ export function useChat() {
       const resp = await fetch('/api/chat/upload', { method: 'POST', body: form })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
-      console.log('[useChat] multimodal reader started')
       while (true) {
-        const { done, value } = await reader.read(); if (done) { console.log('[useChat] multimodal reader done'); break }
+        const { done, value } = await reader.read(); if (done) break
         buf += decoder.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop() || ''
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue

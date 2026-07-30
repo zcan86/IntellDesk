@@ -21,12 +21,10 @@ watch(() => messages.value.length, async () => {
 })
 
 function doSend() {
-  console.log('[IntelliDesk] doSend called, text:', inputText.value, 'streaming:', isStreaming.value)
   const text = inputText.value.trim()
   if (!text || isStreaming.value) return
   inputText.value = ''
   sendMessage(text)
-  console.log('[IntelliDesk] sendMessage dispatched')
 }
 
 function onKeydown(e: KeyboardEvent) {
