@@ -1,8 +1,6 @@
-# 🤖 IntelliDesk — 多智能体电商客服 Agent
+# 🤖 IntelliDesk — 电商智能客服 Agent
 
-基于 **LangGraph 多智能体 + Adaptive-RAG + MCP 协议 + 电商工具链** 的电商智能客服系统。
-
-7 类意图自动路由，8 个工具覆盖订单/物流/退换货/商品推荐全场景。
+基于 **LangGraph Agent + Adaptive-RAG + MCP 协议 + SQLite** 的耐克电商客服。网关鉴权、4层请求路由、7工具、订单/退款/物流全链路、服务评价。
 
 ---
 
@@ -110,9 +108,11 @@ Docker: `docker compose up -d`
 - [x] ChromaDB + BGE-m3 语义检索
 - [x] MCP 协议集成 + McpToolServer
 - [x] Adaptive-RAG 混合检索 + 重排序
-- [x] 多智能体电商客服（意图路由 + 电商工具链）
+- [x] 电商客服（意图路由 + 7工具链）
 - [x] 前端重构 Vue 3 + Element Plus + TypeScript
-- [x] 多 Agent 调度可视化（Orchestrator + SSE agent_start/agent_end + 前端展示）
+- [x] 订单数据库 SQLite + 退款退货 + 物流跟踪
+- [x] 请求分级路由（精确/关键词/语义）+ 网关鉴权限流
+- [x] 服务评价系统 + Token 统计 + 用户画像
 
 ---
 
