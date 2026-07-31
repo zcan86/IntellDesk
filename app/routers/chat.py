@@ -107,12 +107,26 @@ async def chat(req: ChatRequest):
 
         logger.info(f"[{session_id[:8]}] Agent处理: {req.message[:100]}...")
 
+        # ── 5 轮记忆限制：请求前裁剪超出的历史消息 ──
+        MAX_TURNS = 5
+        try:
+            current_state = agent.get_state(config)
+            if current_state and current_state.values:
+                msgs = list(current_state.values.get("messages", []))
+                human_ai = [m for m in msgs if hasattr(m, "type") and m.type in ("human", "ai")]
+                if len(human_ai) >= MAX_TURNS * 2:
+                    system_msgs = [m for m in msgs if hasattr(m, "type") and m.type == "system"]
+                    trimmed = system_msgs + human_ai[-(MAX_TURNS * 2):]
+                    agent.update_state(config, {"messages": trimmed})
+                    logger.info(f"[{session_id[:8]}] 记忆裁剪: {len(human_ai)}→{MAX_TURNS*2}")
+        except Exception:
+            pass  # 新会话无状态，跳过
+
         result = agent.invoke(
             {"messages": [("user", req.message)]},
             config=config,
         )
 
-        # 提取最后一条 AI 消息
         messages = result.get("messages", [])
         reply = ""
         for msg in reversed(messages):
