@@ -23,11 +23,16 @@ async def lifespan(app: FastAPI):
 
     try:
         from app.rag.loader import build_index
-        logger.info("正在初始化知识库索引...")
+        logger.info("初始化知识库索引...")
         build_index()
-        logger.info("知识库索引就绪")
     except Exception as e:
-        logger.warning(f"知识库索引初始化失败（服务仍可启动）: {e}")
+        logger.warning(f"知识库索引初始化失败: {e}")
+
+    try:
+        from app.database import init_db
+        init_db()
+    except Exception as e:
+        logger.warning(f"数据库初始化失败: {e}")
 
     yield
     logger.info("IntelliDesk 已关闭")

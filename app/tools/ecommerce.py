@@ -11,69 +11,74 @@ from langchain.tools import tool
 from loguru import logger
 
 
-# ── Mock 数据 ─────────────────────────────────────────────────
-_ORDERS = {
-    "DD20240001": {"status": "已签收", "date": "2025-07-20", "item": "蓝牙降噪耳机 Pro", "price": 299},
-    "DD20240002": {"status": "运输中", "date": "2025-07-28", "item": "纯棉短袖T恤", "price": 59},
-    "DD20240003": {"status": "待发货", "date": "2025-07-29", "item": "不锈钢保温杯", "price": 89},
-}
-
-
 @tool
 def query_order(order_id: str) -> str:
     """查询订单状态和详情。
 
-    当用户提供订单号并询问订单状态时调用。
-    例如："帮我查一下 DD20240001 的订单状态"
+    当用户提供订单号时调用。例如："帮我查一下 DD20240701001"
 
     Args:
-        order_id: 订单号，如 DD20240001
+        order_id: 订单号，如 DD20240701001
     """
     logger.info(f"📦 查询订单: {order_id}")
-    order = _ORDERS.get(order_id)
+    from app.database import get_order
+    order = get_order(order_id)
 
     if not order:
-        return f"未找到订单 {order_id}。请确认订单号是否正确（格式：DD + 8位数字）。"
+        return f"未找到订单 {order_id}。请确认订单号是否正确。"
 
-    return (
-        f"📦 订单 {order_id}\n"
-        f"  商品：{order['item']}\n"
-        f"  金额：¥{order['price']}\n"
-        f"  下单时间：{order['date']}\n"
-        f"  当前状态：{order['status']}\n"
-        f"  预计送达：{_estimate_delivery(order['date'], order['status'])}"
-    )
+    shipping_map = {
+        "待付款": "⏳ 待付款",
+        "待发货": "📦 待发货",
+        "运输中": "🚚 运输中",
+        "已签收": "✅ 已签收",
+        "已取消": "❌ 已取消",
+    }
+    status_text = shipping_map.get(order["status"], order["status"])
+
+    lines = [
+        f"📦 订单 {order_id}",
+        f"  用户：{order.get('user_name', '')}",
+        f"  商品：{order['product_name']}",
+        f"  尺码：EU {order['shoe_size']}" if order.get("shoe_size") else "",
+        f"  数量：{order['quantity']}",
+        f"  金额：¥{order['price']}",
+        f"  下单时间：{order['created_at']}",
+        f"  当前状态：{status_text}",
+    ]
+    if order.get("tracking_number"):
+        lines.append(f"  快递单号：{order['tracking_number']}")
+    if order.get("shipping_address"):
+        lines.append(f"  收货地址：{order['shipping_address']}")
+
+    return "\n".join([l for l in lines if l])
 
 
 @tool
 def track_delivery(order_id: str) -> str:
-    """查询物流轨迹。
-
-    当用户询问物流详情、快递到哪了时调用。
-
-    Args:
-        order_id: 订单号
-    """
+    """查询物流轨迹。当用户询问物流详情时调用。"""
     logger.info(f"🚚 物流查询: {order_id}")
-    order = _ORDERS.get(order_id)
+    from app.database import get_order
+    order = get_order(order_id)
 
     if not order:
         return f"未找到订单 {order_id}。"
 
     if order["status"] == "待发货":
-        return f"订单 {order_id} 尚未发货，预计 24 小时内发出。"
-
+        return f"订单 {order_id} 尚未发货。"
     if order["status"] == "已签收":
-        return f"订单 {order_id} 已于 {order['date']} 签收。"
+        return f"订单 {order_id} 已于 {order['created_at'][:10]} 签收。"
+    if order["status"] == "待付款":
+        return f"订单 {order_id} 尚未付款，请先完成支付。"
 
-    # Mock 物流轨迹
     now = datetime.now()
     return (
         f"🚚 订单 {order_id} 物流轨迹：\n"
         f"  {now.strftime('%m-%d %H:%M')}  快件到达【目的地分拨中心】\n"
-        f"  {(now - timedelta(hours=5)).strftime('%m-%d %H:%M')}  快件离开【中转站】\n"
+        f"  {(now - timedelta(hours=5)).strftime('%m-%d %H:%M')}  离开【中转站】\n"
         f"  {(now - timedelta(hours=12)).strftime('%m-%d %H:%M')}  商家已揽件\n"
-        f"  预计今天下午派送"
+        f"  快递单号：{order.get('tracking_number', '暂无')}\n"
+        f"  预计今天派送"
     )
 
 

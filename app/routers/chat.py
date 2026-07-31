@@ -277,6 +277,29 @@ async def upload_and_chat(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── 订单查询 API ────────────────────────────────────────────
+
+@router.get("/orders/{user_id}")
+async def list_orders(user_id: str):
+    """查询用户的所有订单"""
+    from app.database import get_user_orders, get_user
+    user = get_user(user_id)
+    if not user:
+        return {"error": "用户不存在", "user_id": user_id}
+    orders = get_user_orders(user_id)
+    return {"user": user, "orders": orders, "count": len(orders)}
+
+
+@router.get("/order/{order_id}")
+async def order_detail(order_id: str):
+    """查询单个订单详情"""
+    from app.database import get_order
+    order = get_order(order_id)
+    if not order:
+        return {"error": "订单不存在"}
+    return {"order": order}
+
+
 # ── 文档管理接口 ──────────────────────────────────────────────
 
 
