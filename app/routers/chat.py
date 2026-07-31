@@ -46,6 +46,9 @@ class ReindexResponse(BaseModel):
 
 # ── Agent 单例 ──────────────────────────────────────────────
 _agent = None
+_session_timestamps: dict[str, float] = {}  # thread_id → 创建时间
+
+import time as _time
 
 
 def get_agent():
@@ -66,9 +69,52 @@ def get_agent():
 
 def reset_agent():
     """重置 Agent"""
-    global _agent
+    global _agent, _session_timestamps
     _agent = None
+    _session_timestamps.clear()
     logger.info("Agent 已重置")
+
+
+def _prune_session(agent, thread_id: str) -> bool:
+    """检查并清理过期/超长会话
+
+    Returns:
+        True = 会话已被清除，需要创建新会话
+    """
+    now = _time.time()
+
+    # 1. TTL 过期检查
+    created = _session_timestamps.get(thread_id)
+    if created and (now - created) > settings.SESSION_TTL_MINUTES * 60:
+        try:
+            agent.update_state(
+                {"configurable": {"thread_id": thread_id}},
+                {"messages": []},
+            )
+        except Exception:
+            pass
+        _session_timestamps.pop(thread_id, None)
+        logger.info(f"[{thread_id[:8]}] 会话过期，已清除")
+        return True
+
+    # 2. 轮数裁剪
+    try:
+        state = agent.get_state({"configurable": {"thread_id": thread_id}})
+        if state and state.values:
+            msgs = list(state.values.get("messages", []))
+            human_ai = [m for m in msgs if hasattr(m, "type") and m.type in ("human", "ai")]
+            if len(human_ai) >= settings.SESSION_MAX_TURNS * 2:
+                system_msgs = [m for m in msgs if hasattr(m, "type") and m.type == "system"]
+                trimmed = system_msgs + human_ai[-(settings.SESSION_MAX_TURNS * 2):]
+                agent.update_state(
+                    {"configurable": {"thread_id": thread_id}},
+                    {"messages": trimmed},
+                )
+                logger.info(f"[{thread_id[:8]}] 记忆裁剪: {len(human_ai)}→{settings.SESSION_MAX_TURNS*2}")
+    except Exception:
+        pass
+
+    return False
 
 
 # ── 健康检查 ────────────────────────────────────────────────
@@ -101,26 +147,18 @@ async def chat(req: ChatRequest):
             logger.info(f"[{session_id[:8]}] 路由命中[{source}]: {req.message[:50]}")
             return ChatResponse(reply=reply, session_id=session_id)
 
-        # ── 未命中 → Agent ──
+        # ── Agent ──
         agent = get_agent()
         config = {"configurable": {"thread_id": session_id}}
 
-        logger.info(f"[{session_id[:8]}] Agent处理: {req.message[:100]}...")
+        if session_id not in _session_timestamps:
+            _session_timestamps[session_id] = _time.time()
 
-        # ── 5 轮记忆限制：请求前裁剪超出的历史消息 ──
-        MAX_TURNS = 5
-        try:
-            current_state = agent.get_state(config)
-            if current_state and current_state.values:
-                msgs = list(current_state.values.get("messages", []))
-                human_ai = [m for m in msgs if hasattr(m, "type") and m.type in ("human", "ai")]
-                if len(human_ai) >= MAX_TURNS * 2:
-                    system_msgs = [m for m in msgs if hasattr(m, "type") and m.type == "system"]
-                    trimmed = system_msgs + human_ai[-(MAX_TURNS * 2):]
-                    agent.update_state(config, {"messages": trimmed})
-                    logger.info(f"[{session_id[:8]}] 记忆裁剪: {len(human_ai)}→{MAX_TURNS*2}")
-        except Exception:
-            pass  # 新会话无状态，跳过
+        expired = _prune_session(agent, session_id)
+        if expired:
+            _session_timestamps[session_id] = _time.time()
+
+        logger.info(f"[{session_id[:8]}] Agent: {req.message[:100]}...")
 
         result = agent.invoke(
             {"messages": [("user", req.message)]},
@@ -312,6 +350,23 @@ async def upload_and_chat(
     except Exception as e:
         logger.exception(f"多模态处理失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── 会话管理 ────────────────────────────────────────────────
+
+@router.delete("/session/{session_id}")
+async def clear_session(session_id: str):
+    """清除指定会话的记忆"""
+    _session_timestamps.pop(session_id, None)
+    agent = get_agent()
+    try:
+        agent.update_state(
+            {"configurable": {"thread_id": session_id}},
+            {"messages": []},
+        )
+        return {"status": "ok", "message": f"会话 {session_id[:8]} 已清除"}
+    except Exception:
+        return {"status": "ok", "message": "会话不存在或已过期"}
 
 
 # ── 订单查询 API ────────────────────────────────────────────

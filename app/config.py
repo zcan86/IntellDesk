@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     # ================== Agent ====================
     AGENT_TEMPERATURE: float = Field(0.7, description="Agent LLM 温度")
     AGENT_MAX_ITERATIONS: int = Field(5, description="Agent 最大工具调用轮数")
+    SESSION_MAX_TURNS: int = Field(5, description="会话记忆最大轮数")
+    SESSION_TTL_MINUTES: int = Field(60, description="会话过期时间(分钟)，超时自动清除")
 
     # ================== MCP ====================
     MCP_SERVER_URL: str = Field(
