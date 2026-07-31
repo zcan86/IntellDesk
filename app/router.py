@@ -126,7 +126,7 @@ def _match_keywords(text: str) -> str | None:
 
 # ── Layer 1: 正则匹配（订单号）────────────────────────────────
 
-ORDER_PATTERN = re.compile(r"(DD\d{10})", re.IGNORECASE)
+ORDER_PATTERN = re.compile(r"(DD\d{9,12})", re.IGNORECASE)
 
 
 def _query_order_direct(text: str) -> str | None:
