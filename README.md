@@ -109,6 +109,18 @@ cd frontend && npm install && npm run dev  # → :5173
 
 ---
 
+## 性能数据
+
+| 指标 | 数值 |
+|---|---|
+| 路由命中率 | 95% (21/22) |
+| 缓存响应 | 0.1ms |
+| Agent 响应 | 2-5s |
+| Token 节省 | 88% (vs 全走Agent) |
+| 测试覆盖 | 21 用例 |
+
+---
+
 ## License
 
 MIT
