@@ -36,35 +36,28 @@ function formatTime(ts: number) {
   return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
-async function showOrders() {
-  try {
-    const uid = prompt('请输入用户ID (u001/u002/u003):', 'u001')
-    if (!uid) return
-    const base = import.meta.env.VITE_API_BASE || ''
-    const key = import.meta.env.VITE_API_KEY || 'sk-intellidesk-demo'
-    const resp = await fetch(`${base}/api/orders/${uid}`, { headers: { 'X-API-Key': key } })
-    const data = await resp.json()
-    if (data.error) { alert(data.error); return }
+import { ElMessageBox } from 'element-plus'
 
-    let html = `<h3>${data.user.name} 的订单 (${data.count}条)</h3><table style="width:100%;border-collapse:collapse">`
-    html += '<tr style="background:#f5f5f5"><th>订单号</th><th>商品</th><th>金额</th><th>状态</th><th>日期</th></tr>'
-    for (const o of data.orders) {
-      html += `<tr style="border-bottom:1px solid #eee">
-        <td>${o.order_id}</td><td>${o.product_name}</td><td>${o.price}</td>
-        <td>${o.status}</td><td>${o.created_at.substring(0,10)}</td></tr>`
-    }
-    html += '</table>'
-
-    const div = document.createElement('div')
-    div.innerHTML = html
-    div.style.cssText = 'max-height:400px;overflow:auto;font-size:13px'
-    document.body.appendChild(div)
-    const dlg = div
-    setTimeout(() => {
-      dlg.style.cssText += ';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.15);z-index:9999;max-width:700px;width:90%'
-      dlg.onclick = () => dlg.remove()
-    }, 10)
-  } catch(e) { console.error(e); alert('加载失败: '+e) }
+function showOrders() {
+  ElMessageBox.prompt('请输入用户ID', '查询订单', {
+    confirmButtonText: '查询', cancelButtonText: '取消',
+    inputPattern: /^u00[1-3]$/, inputErrorMessage: '用户ID: u001/u002/u003',
+  }).then(async ({ value: uid }) => {
+    try {
+      const base = import.meta.env.VITE_API_BASE || ''
+      const key = import.meta.env.VITE_API_KEY || 'sk-intellidesk-demo'
+      const resp = await fetch(`${base}/api/orders/${uid}`, { headers: { 'X-API-Key': key } })
+      const data = await resp.json()
+      if (data.error) { ElMessageBox.alert(data.error, '错误'); return }
+      let html = `<h3>${data.user.name} (${data.count}条)</h3><table style="width:100%;border-collapse:collapse">`
+      html += '<tr style="background:#f5f5f5"><th>单号</th><th>商品</th><th>金额</th><th>状态</th><th>日期</th></tr>'
+      for (const o of data.orders) {
+        html += `<tr style="border-bottom:1px solid #eee"><td>${o.order_id}</td><td>${o.product_name}</td><td>${o.price}</td><td>${o.status}</td><td>${o.created_at.substring(0,10)}</td></tr>`
+      }
+      html += '</table>'
+      ElMessageBox.alert(html, '订单列表', { dangerouslyUseHTMLString: true, confirmButtonText: '关闭' })
+    } catch(e: any) { ElMessageBox.alert('加载失败: '+e, '错误') }
+  }).catch(() => {})
 }
 
 onMounted(loadSessions)
