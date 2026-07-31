@@ -186,10 +186,9 @@ def route(text: str) -> tuple[str, str] | None:
     if any(w in msg for w in COMPLEX_KEYWORDS):
         return None
 
-    # 3. 订单号正则
-    result = _query_order_direct(msg)
-    if result:
-        return (result, "db")
+    # 3. 订单号正则 → 透传 Agent（Agent 处理后自动记住上下文）
+    if ORDER_PATTERN.search(msg):
+        return None
 
     # 4. 关键词
     result = _match_keywords(msg)
