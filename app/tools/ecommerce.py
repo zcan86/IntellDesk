@@ -56,7 +56,7 @@ def query_order(order_id: str) -> str:
 
 @tool
 def track_delivery(order_id: str) -> str:
-    """查询物流轨迹。当用户询问物流详情时调用。"""
+    """查询物流轨迹。当用户询问快递到哪了、物流详情时调用。"""
     logger.info(f"🚚 物流查询: {order_id}")
     from app.database import get_order
     order = get_order(order_id)
@@ -64,21 +64,46 @@ def track_delivery(order_id: str) -> str:
     if not order:
         return f"未找到订单 {order_id}。"
 
-    if order["status"] == "待发货":
-        return f"订单 {order_id} 尚未发货。"
-    if order["status"] == "已签收":
-        return f"订单 {order_id} 已于 {order['created_at'][:10]} 签收。"
-    if order["status"] == "待付款":
-        return f"订单 {order_id} 尚未付款，请先完成支付。"
+    status = order["status"]
+    if status == "待付款":
+        return f"订单 {order_id} 尚未付款，无法查询物流。"
+    if status == "待发货":
+        return f"订单 {order_id} 已付款，预计 24 小时内从【浙江杭州耐克仓库】发出。"
 
+    tn = order.get("tracking_number", "")
+    address = order.get("shipping_address", "")
+
+    # 提取目的地城市
+    dest = "目的地"
+    if "北京" in (address or ""): dest = "北京"
+    elif "上海" in (address or ""): dest = "上海"
+    elif "广州" in (address or ""): dest = "广州"
+    elif "深圳" in (address or ""): dest = "深圳"
+    elif "杭州" in (address or ""): dest = "杭州"
+
+    if status == "已签收":
+        return (
+            f"🚚 订单 {order_id}\n"
+            f"  快递单号：{tn}\n"
+            f"  发货地：浙江杭州耐克仓库\n"
+            f"  目的地：{address}\n"
+            f"  状态：✅ 已签收"
+        )
+
+    # 运输中 — 模拟轨迹节点
     now = datetime.now()
+    product = order["product_name"]
     return (
-        f"🚚 订单 {order_id} 物流轨迹：\n"
-        f"  {now.strftime('%m-%d %H:%M')}  快件到达【目的地分拨中心】\n"
-        f"  {(now - timedelta(hours=5)).strftime('%m-%d %H:%M')}  离开【中转站】\n"
-        f"  {(now - timedelta(hours=12)).strftime('%m-%d %H:%M')}  商家已揽件\n"
-        f"  快递单号：{order.get('tracking_number', '暂无')}\n"
-        f"  预计今天派送"
+        f"🚚 订单 {order_id} — {product}\n"
+        f"  快递单号：{tn}\n"
+        f"  发货地：浙江杭州耐克仓库\n"
+        f"  目的地：{address}\n\n"
+        f"  物流轨迹：\n"
+        f"  ● {now.strftime('%m-%d %H:%M')}  快件到达【{dest}分拨中心】，准备派送\n"
+        f"  ● {(now - timedelta(hours=6)).strftime('%m-%d %H:%M')}  快件到达【{dest}中转站】\n"
+        f"  ● {(now - timedelta(hours=18)).strftime('%m-%d %H:%M')}  快件离开【杭州集散中心】\n"
+        f"  ● {(now - timedelta(hours=24)).strftime('%m-%d %H:%M')}  【浙江杭州耐克仓库】已揽件\n\n"
+        f"  预计今天到达，请保持电话畅通 📱"
     )
 
 
