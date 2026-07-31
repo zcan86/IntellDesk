@@ -87,6 +87,15 @@ def init_db():
             o,
         )
 
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+            comment TEXT,
+            created_at TEXT NOT NULL
+        );
+    """)
     conn.commit()
     conn.close()
     logger.info(f"数据库就绪: {DB_PATH}")
@@ -120,6 +129,38 @@ def get_user_orders(user_id: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def save_feedback(session_id: str, rating: int, comment: str = "") -> dict:
+    """保存用户反馈"""
+    from datetime import datetime
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO feedback(session_id, rating, comment, created_at) VALUES (?,?,?,?)",
+        (session_id, rating, comment, datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "感谢你的反馈！"}
+
+
+def get_feedback_stats() -> dict:
+    """反馈统计"""
+    conn = get_connection()
+    total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
+    avg = conn.execute("SELECT AVG(rating) FROM feedback").fetchone()[0]
+    dist = {}
+    for r in range(1, 6):
+        dist[str(r)] = conn.execute("SELECT COUNT(*) FROM feedback WHERE rating=?", (r,)).fetchone()[0]
+    recent = conn.execute(
+        "SELECT rating, comment, session_id, created_at FROM feedback ORDER BY created_at DESC LIMIT 5"
+    ).fetchall()
+    conn.close()
+    return {
+        "total": total, "avg_rating": round(avg, 1) if avg else 0,
+        "distribution": dist,
+        "recent": [{"rating": r[0], "comment": r[1], "session": r[2][:8], "time": r[3]} for r in recent],
+    }
 
 
 def get_user(user_id: str) -> dict | None:

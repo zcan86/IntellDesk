@@ -419,6 +419,28 @@ async def api_stats():
     return get_summary()
 
 
+# ── 用户反馈 ────────────────────────────────────────────────
+
+class FeedbackRequest(BaseModel):
+    session_id: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str = ""
+
+
+@router.post("/feedback")
+async def submit_feedback(req: FeedbackRequest):
+    """提交服务评价"""
+    from app.database import save_feedback
+    return save_feedback(req.session_id, req.rating, req.comment)
+
+
+@router.get("/feedback/stats")
+async def feedback_stats():
+    """反馈统计"""
+    from app.database import get_feedback_stats
+    return get_feedback_stats()
+
+
 # ── 会话管理 ────────────────────────────────────────────────
 
 @router.delete("/session/{session_id}")
