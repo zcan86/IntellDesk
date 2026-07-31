@@ -65,8 +65,8 @@ def create_intellidesk_agent(tools: list | None = None):
         model=settings.DEEPSEEK_MODEL_NAME,
         api_key=settings.DEEPSEEK_API_KEY,
         base_url=settings.DEEPSEEK_BASE_URL,
-        temperature=settings.AGENT_TEMPERATURE,
-        max_tokens=4096,
+        temperature=0.3,  # 降低随机性，减少半截回复
+        max_tokens=8192,  # 确保工具调用+结果+回复不截断
         timeout=120,
     )
 
