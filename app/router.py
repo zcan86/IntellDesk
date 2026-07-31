@@ -191,10 +191,15 @@ def route(text: str) -> tuple[str, str] | None:
     if result:
         return (result, "keyword")
 
-    # 4. 语义匹配（Layer 2）
+    # 4. 复杂问题 → 直接透传 Agent（推荐/对比/选购类问题必须走LLM）
+    COMPLEX_KEYWORDS = ["推荐", "比较", "对比", "哪个好", "选购", "适合", "建议", "优缺点"]
+    if any(w in msg for w in COMPLEX_KEYWORDS):
+        return None
+
+    # 5. 语义匹配（Layer 2）
     result = _semantic_match(msg)
     if result:
         return (result, "semantic")
 
-    # 5. 未命中 → 透传 Agent
+    # 6. 未命中 → 透传 Agent
     return None
