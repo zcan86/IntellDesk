@@ -9,6 +9,7 @@ POST /api/documents/reindex — 重建知识库索引
 import json
 import uuid
 
+import asyncio
 import json as json_module
 from pathlib import Path
 
@@ -16,6 +17,17 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from loguru import logger
+
+# LLM 并发控制信号量
+_sem: asyncio.Semaphore | None = None
+_waiters = 0
+
+
+def _sem_get() -> asyncio.Semaphore:
+    global _sem
+    if _sem is None:
+        _sem = asyncio.Semaphore(settings.LLM_MAX_CONCURRENT)
+    return _sem
 
 from app.agent import create_intellidesk_agent
 from app.config import settings
@@ -125,7 +137,14 @@ def _prune_session(agent, thread_id: str) -> bool:
 async def health_check():
     status = get_index_status()
     kb_str = f"{status['chunk_count']} chunks" if status["ready"] else "not indexed"
-    return {"status": "ok", "service": "IntelliDesk", "knowledge_base": kb_str}
+    return {
+        "status": "ok", "service": "IntelliDesk",
+        "knowledge_base": kb_str,
+        "queue": {
+            "max_concurrent": settings.LLM_MAX_CONCURRENT,
+            "waiting": _waiters or 0,
+        },
+    }
 
 
 # ── 普通对话接口（支持 Memory）─────────────────────────────────
@@ -164,10 +183,29 @@ async def chat(req: ChatRequest):
 
         logger.info(f"[{session_id[:8]}] Agent: {req.message[:100]}...")
 
-        result = agent.invoke(
-            {"messages": [("user", req.message)]},
-            config=config,
-        )
+        # LLM 并发控制：排队 + 超时
+        global _waiters
+        queue_start = _time.time()
+        _waiters += 1
+        async with _sem_get():
+            _waiters -= 1
+            wait_ms = (_time.time() - queue_start) * 1000
+            if wait_ms > 100:
+                logger.info(f"[{session_id[:8]}] LLM排队等待: {wait_ms:.0f}ms (并发{settings.LLM_MAX_CONCURRENT})")
+
+            try:
+                result = await asyncio.wait_for(
+                    agent.ainvoke(
+                        {"messages": [("user", req.message)]},
+                        config=config,
+                    ),
+                    timeout=settings.LLM_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"服务繁忙，请稍后重试（超时 {settings.LLM_TIMEOUT_SECONDS}s）。当前排队: {_waiters or 0} 人",
+                )
 
         messages = result.get("messages", [])
         reply = ""

@@ -51,7 +51,9 @@ class Settings(BaseSettings):
     AGENT_TEMPERATURE: float = Field(0.7, description="Agent LLM 温度")
     AGENT_MAX_ITERATIONS: int = Field(5, description="Agent 最大工具调用轮数")
     SESSION_MAX_TURNS: int = Field(5, description="会话记忆最大轮数")
-    SESSION_TTL_MINUTES: int = Field(60, description="会话过期时间(分钟)，超时自动清除")
+    SESSION_TTL_MINUTES: int = Field(60, description="会话过期时间(分钟)")
+    LLM_MAX_CONCURRENT: int = Field(5, description="LLM 最大并发数")
+    LLM_TIMEOUT_SECONDS: int = Field(45, description="LLM 请求超时(秒)")
 
     # ================== MCP ====================
     MCP_SERVER_URL: str = Field(
