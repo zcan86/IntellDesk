@@ -181,22 +181,22 @@ def route(text: str) -> tuple[str, str] | None:
         logger.info(f"  [路由] 精确匹配: {msg[:30]}")
         return (EXACT_CACHE[msg], "cache")
 
-    # 2. 订单号正则
+    # 2. 复杂/操作类问题 → 必须走 Agent（推荐/对比/退款/退货等）
+    COMPLEX_KEYWORDS = ["推荐", "比较", "对比", "哪个好", "选购", "适合", "建议", "优缺点", "退款", "退货", "换货"]
+    if any(w in msg for w in COMPLEX_KEYWORDS):
+        return None
+
+    # 3. 订单号正则
     result = _query_order_direct(msg)
     if result:
         return (result, "db")
 
-    # 3. 关键词
+    # 4. 关键词
     result = _match_keywords(msg)
     if result:
         return (result, "keyword")
 
-    # 4. 复杂问题 → 直接透传 Agent（推荐/对比/选购类问题必须走LLM）
-    COMPLEX_KEYWORDS = ["推荐", "比较", "对比", "哪个好", "选购", "适合", "建议", "优缺点"]
-    if any(w in msg for w in COMPLEX_KEYWORDS):
-        return None
-
-    # 5. 语义匹配（Layer 2）
+    # 5. 语义匹配
     result = _semantic_match(msg)
     if result:
         return (result, "semantic")
