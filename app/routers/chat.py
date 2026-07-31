@@ -20,6 +20,7 @@ from loguru import logger
 from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
+from app.router import route
 from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -91,11 +92,20 @@ async def chat(req: ChatRequest):
     - 后续调用传入 session_id 以在同一会话中继续对话
     """
     try:
-        agent = get_agent()
         session_id = req.session_id or str(uuid.uuid4())
+
+        # ── 路由检查（Layer 1-3）──
+        cached = route(req.message)
+        if cached:
+            reply, source = cached
+            logger.info(f"[{session_id[:8]}] 路由命中[{source}]: {req.message[:50]}")
+            return ChatResponse(reply=reply, session_id=session_id)
+
+        # ── 未命中 → Agent ──
+        agent = get_agent()
         config = {"configurable": {"thread_id": session_id}}
 
-        logger.info(f"[{session_id[:8]}] 收到消息: {req.message[:100]}...")
+        logger.info(f"[{session_id[:8]}] Agent处理: {req.message[:100]}...")
 
         result = agent.invoke(
             {"messages": [("user", req.message)]},
@@ -150,11 +160,24 @@ async def chat_stream(req: ChatRequest):
         };
     """
     try:
-        agent = get_agent()
         session_id = req.session_id or str(uuid.uuid4())
+
+        # ── 路由检查 ──
+        cached = route(req.message)
+        if cached:
+            reply, source = cached
+            logger.info(f"[{session_id[:8]}] SSE路由命中[{source}]: {req.message[:50]}")
+
+            async def cached_generator():
+                yield f"data: {json.dumps({'type': 'token', 'content': reply}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'session_id': session_id}, ensure_ascii=False)}\n\n"
+            return StreamingResponse(cached_generator(), media_type="text/event-stream")
+
+        # ── Agent ──
+        agent = get_agent()
         config = {"configurable": {"thread_id": session_id}}
 
-        logger.info(f"[{session_id[:8]}] SSE 开始: {req.message[:100]}...")
+        logger.info(f"[{session_id[:8]}] SSE Agent: {req.message[:100]}...")
 
         async def event_generator():
             """异步生成器：逐事件推送给前端"""
