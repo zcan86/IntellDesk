@@ -7,6 +7,9 @@
 
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
+load_dotenv()  # 加载 .env 到系统环境变量（LangSmith 等依赖读取）
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
