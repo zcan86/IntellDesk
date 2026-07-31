@@ -23,9 +23,14 @@ def _build_tool(tool_def: dict, server_url: str):
     @tool(t_name, description=t_desc)
     def _wrapper(**kwargs) -> str:
         try:
+            # LangChain 对 **kwargs 工具会双层包裹：kwargs={"kwargs": {...actual...}}
+            if len(kwargs) == 1 and "kwargs" in kwargs and isinstance(kwargs["kwargs"], dict):
+                args = kwargs["kwargs"]
+            else:
+                args = kwargs
             resp = httpx.post(
                 f"{server_url}/mcp/call",
-                json={"name": t_name, "arguments": kwargs},
+                json={"name": t_name, "arguments": args},
                 timeout=30,
             )
             resp.raise_for_status()
