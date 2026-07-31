@@ -165,15 +165,16 @@ async def chat(req: ChatRequest):
         if cached:
             reply, source = cached
             stats_record(session_id, source, len(req.message), _time.time() - t0)
-            # 写入 Agent 记忆，让后续对话能引用上下文（如"退款这笔"）
+            # 写入 Agent 记忆，让后续对话能引用上下文
             try:
+                from langchain_core.messages import HumanMessage, AIMessage
                 agent = get_agent()
                 agent.update_state(
                     {"configurable": {"thread_id": session_id}},
-                    {"messages": [("user", req.message), ("ai", reply)]},
+                    {"messages": [HumanMessage(content=req.message), AIMessage(content=reply)]},
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"写入记忆失败: {e}")
             return ChatResponse(reply=reply, session_id=session_id)
 
         # ── Agent ──
