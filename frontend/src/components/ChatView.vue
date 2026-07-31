@@ -4,7 +4,7 @@ import { Fold, Promotion, Picture, Microphone, StarFilled } from '@element-plus/
 import ChatMessage from './ChatMessage.vue'
 import WelcomeScreen from './WelcomeScreen.vue'
 import { useChat } from '../composables/useChat'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const props = defineProps<{ sessionId: string | null; sidebarCollapsed: boolean }>()
 const emit = defineEmits<{ toggleSidebar: []; sessionCreated: [id: string] }>()
@@ -16,6 +16,30 @@ const fileInput = ref<HTMLInputElement>()
 const rating = ref(0)
 const ratingComment = ref('')
 const ratingSubmitted = ref(false)
+const ordersPanel = ref(false)
+const ordersData = ref<any[]>([])
+
+async function loadOrders() {
+  ordersPanel.value = !ordersPanel.value
+  if (!ordersPanel.value) return
+  const { value: uid } = await ElMessageBox.prompt('请输入用户ID', '查询订单', {
+    confirmButtonText: '查询', cancelButtonText: '取消',
+    inputPattern: /^u00[1-3]$/, inputErrorMessage: 'u001/u002/u003',
+  }).catch(() => ({ value: '' }))
+  if (!uid) { ordersPanel.value = false; return }
+  try {
+    const base = import.meta.env.VITE_API_BASE || ''
+    const key = import.meta.env.VITE_API_KEY || 'sk-intellidesk-demo'
+    const resp = await fetch(`${base}/api/orders/${uid}`, { headers: { 'X-API-Key': key } })
+    const data = await resp.json()
+    ordersData.value = data.orders || []
+  } catch { ordersData.value = [] }
+}
+function sendOrderMsg(oid: string) {
+  inputText.value = `帮我查一下订单 ${oid}`
+  doSend()
+  ordersPanel.value = false
+}
 
 watch(() => props.sessionId, (val) => { if (val === null) { clearMessages(); rating.value = 0; ratingComment.value = ''; ratingSubmitted.value = false } })
 watch(() => messages.value.length, async () => {
@@ -80,7 +104,21 @@ async function onFileChange(e: Event) {
       <ChatMessage v-for="(msg, i) in messages" :key="i" :message="msg" :is-last="i === messages.length - 1" :is-streaming="isStreaming && i === messages.length - 1" />
     </div>
 
-    <!-- 评价栏（有对话 + 非流式时显示） -->
+    <!-- 订单面板 -->
+    <div class="orders-panel">
+      <el-button size="small" text @click="loadOrders">{{ ordersPanel ? '收起' : '我的订单' }}</el-button>
+      <div v-if="ordersPanel && ordersData.length" class="orders-list">
+        <div v-for="o in ordersData" :key="o.order_id" class="order-row" @click="sendOrderMsg(o.order_id)">
+          <span class="order-id">{{ o.order_id }}</span>
+          <span class="order-item">{{ o.product_name }}</span>
+          <span :class="'order-status status-'+o.status">{{ o.status }}</span>
+          <span class="order-send">发送</span>
+        </div>
+      </div>
+      <span v-if="ordersPanel && !ordersData.length" style="font-size:12px;color:#999">暂无订单</span>
+    </div>
+
+    <!-- 评价栏 -->
     <div v-if="messages.length > 0 && !isStreaming" class="rating-bar">
       <template v-if="!ratingSubmitted">
         <span class="rating-label">服务评价：</span>
@@ -117,4 +155,13 @@ async function onFileChange(e: Event) {
 .star:hover { color: #f5a623; }
 .rating-label { margin-right: 4px; }
 .rating-thanks { color: #10a37f; font-weight: 500; }
+.orders-panel { max-width:800px; margin:0 auto; width:100%; padding:0 20px; font-size:13px; }
+.orders-list { background:#fff; border-radius:8px; padding:8px; margin-top:4px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.order-row { display:flex; align-items:center; gap:12px; padding:8px 10px; cursor:pointer; border-radius:6px; transition:background 0.15s; }
+.order-row:hover { background:#f5f6fa; }
+.order-id { font-family:monospace; font-size:12px; color:#6e6e80; min-width:130px; }
+.order-item { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.order-status { font-size:12px; font-weight:600; min-width:60px; text-align:center; }
+.status-已签收 { color:#10a37f; } .status-运输中 { color:#409eff; } .status-待发货 { color:#e6a23c; } .status-待付款 { color:#f56c6c; }
+.order-send { color:#409eff; font-size:12px; cursor:pointer; }
 </style>

@@ -36,33 +36,6 @@ function formatTime(ts: number) {
   return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
-function showOrders() {
-  import('element-plus').then(({ ElMessageBox }) => {
-    ElMessageBox.prompt('请输入用户ID', '查询订单', {
-      confirmButtonText: '查询', cancelButtonText: '取消',
-      inputPattern: /^u00[1-3]$/, inputErrorMessage: '用户ID: u001/u002/u003',
-    }).then(async ({ value: uid }: any) => {
-      try {
-        const base = import.meta.env.VITE_API_BASE || ''
-        const key = import.meta.env.VITE_API_KEY || 'sk-intellidesk-demo'
-        const resp = await fetch(`${base}/api/orders/${uid}`, { headers: { 'X-API-Key': key } })
-        const data = await resp.json()
-        if (data.error) { ElMessageBox.alert(data.error, '错误'); return }
-        const style = 'padding:8px 12px;text-align:left;font-size:13px'
-        let html = `<h3 style="margin:0 0 12px">${data.user.name} 共 ${data.count} 笔订单</h3>`
-        html += '<table style="width:100%;border-collapse:collapse;line-height:2">'
-        html += `<tr style="background:#f0f0f5"><th style="${style}">订单号</th><th style="${style}">商品</th><th style="${style}">金额</th><th style="${style}">状态</th><th style="${style}">日期</th></tr>`
-        for (const o of data.orders) {
-          const color = o.status === '已签收' ? '#10a37f' : o.status === '运输中' ? '#409eff' : o.status === '待付款' ? '#f56c6c' : '#909399'
-          html += `<tr style="border-bottom:1px solid #eee"><td style="${style}">${o.order_id}</td><td style="${style}">${o.product_name}</td><td style="${style}">${o.price}</td><td style="${style};color:${color};font-weight:600">${o.status}</td><td style="${style}">${o.created_at.substring(0,10)}</td></tr>`
-        }
-        html += '</table>'
-        ElMessageBox.alert(html, '订单列表', { dangerouslyUseHTMLString: true, confirmButtonText: '关闭', customClass: 'orders-dialog' })
-      } catch(e: any) { ElMessageBox.alert('加载失败: '+(e.message||e), '错误') }
-    }).catch(() => {})
-  })
-}
-
 onMounted(loadSessions)
 </script>
 
@@ -70,7 +43,6 @@ onMounted(loadSessions)
   <aside class="sidebar" :class="{ collapsed }">
     <div class="sidebar-header"><span class="logo">🛒 IntelliDesk</span></div>
     <el-button :icon="Plus" class="side-btn" @click="newChat">新对话</el-button>
-    <el-button class="side-btn" @click="showOrders">我的订单</el-button>
     <div class="history-list">
       <div
         v-for="s in sessions" :key="s.id"
