@@ -25,7 +25,7 @@ def mcp_server():
         [sys.executable, str(project_root / "mcp_server" / "server.py")],
         cwd=str(project_root),
     )
-    time.sleep(5)  # 等待启动
+    time.sleep(8)  # 等待 MCP Server 启动（含索引构建）
     yield
     _mcp_process.terminate()
     _mcp_process.wait()

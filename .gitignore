@@ -44,3 +44,4 @@ docker-compose.override.yaml
 static/
 frontend/.env
 frontend/dist/
+data/checkpoint.db

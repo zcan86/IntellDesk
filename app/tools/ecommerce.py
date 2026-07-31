@@ -138,55 +138,90 @@ def process_return(order_id: str, reason: str = "", return_type: str = "退货�
 
 @tool
 def product_search(keyword: str) -> str:
-    """搜索耐克鞋款。当用户询问鞋子、运动鞋、推荐鞋款时调用。
+    """搜索耐克鞋款。支持颜色/尺码/价格/品类筛选。
+
+    例如："白色42码1000以内跑步鞋" → 精准匹配
 
     Args:
-        keyword: 搜索关键词（如 Air Max/跑步/篮球/白色/便宜 等）
+        keyword: 搜索关键词
     """
     logger.info(f"🔍 商品搜索: {keyword}")
 
     catalog = {
-        1:  ("Nike Air Max 97 银色子弹", 1199, "气垫鞋/运动休闲", "data/product_images/1.jpg"),
-        2:  ("Nike Air Force 1 '07 白色", 899, "运动休闲/百搭经典", "data/product_images/2.jpg"),
-        3:  ("Nike Dunk Low Retro 熊猫", 799, "运动休闲/潮流", "data/product_images/3.jpg"),
-        4:  ("Nike Air Jordan 1 Retro High OG", 1499, "篮球鞋/收藏级", "data/product_images/4.jpg"),
-        5:  ("Nike ZoomX Vaporfly 3 竞速", 2599, "跑步鞋/专业竞速", "data/product_images/5.jpg"),
-        6:  ("Nike React Infinity Run 4", 1099, "跑步鞋/日常训练", "data/product_images/6.jpg"),
-        7:  ("Nike Blazer Mid '77 Vintage", 749, "运动休闲/复古", "data/product_images/7.jpg"),
-        8:  ("Nike Air Max 270 React", 1299, "气垫鞋/舒适", "data/product_images/8.jpg"),
+        1:  ("Nike Air Max 97", 1199, ["气垫鞋", "运动休闲"], ["银色"]),
+        2:  ("Nike Air Force 1 '07", 899, ["运动休闲", "百搭经典"], ["白色"]),
+        3:  ("Nike Dunk Low Retro", 799, ["运动休闲", "潮流"], ["黑色"]),
+        4:  ("Nike Air Jordan 1 Retro High OG", 1499, ["篮球鞋", "收藏级"], ["黑红"]),
+        5:  ("Nike ZoomX Vaporfly 3", 2599, ["跑步鞋", "专业竞速"], ["荧光绿"]),
+        6:  ("Nike React Infinity Run 4", 1099, ["跑步鞋", "日常训练"], ["白色", "黑色"]),
+        7:  ("Nike Blazer Mid '77 Vintage", 749, ["运动休闲", "复古"], ["白色"]),
+        8:  ("Nike Air Max 270 React", 1299, ["气垫鞋", "舒适"], ["黑白"]),
     }
 
-    # 关键词匹配
+    # 尺码统一
+    all_sizes = list(range(36, 45))
+
+    # 解析筛选条件
+    import re
     kw = keyword.lower()
+
+    # 价格：1000以内 / 800-1200 / 1000以上
+    max_price = None
+    min_price = None
+    m = re.search(r"(\d+)\s*以内", kw)
+    if m: max_price = int(m.group(1))
+    m = re.search(r"(\d+)\s*以上", kw)
+    if m: min_price = int(m.group(1))
+    m = re.search(r"(\d+)\s*[-–]\s*(\d+)", kw)
+    if m: min_price, max_price = int(m.group(1)), int(m.group(2))
+
+    # 尺码
+    target_size = None
+    m = re.search(r"(\d{2})\s*码", kw)
+    if m:
+        sz = int(m.group(1))
+        if 36 <= sz <= 44: target_size = sz
+
+    # 颜色
+    colors = ["白色", "黑色", "银色", "黑红", "荧光绿", "黑白"]
+    target_color = None
+    for c in colors:
+        if c in keyword:
+            target_color = c
+            break
+
     results = []
-
-    # 品类映射
-    category_map = {
-        "跑步": [5, 6], "篮球": [4], "气垫": [1, 8],
-        "休闲": [1, 2, 3, 7], "运动": [1, 2, 3, 4, 5, 6, 7, 8],
-        "复古": [7], "经典": [2, 7], "潮流": [3],
-        "白色": [2], "黑色": [3], "银色": [1],
-        "便宜": [3, 7], "贵": [4, 5], "专业": [5],
-    }
-
-    matched_ids = set()
-    for cat, ids in category_map.items():
-        if cat in kw:
-            matched_ids.update(ids)
-
-    if matched_ids:
-        results = [(idx, *catalog[idx]) for idx in matched_ids]
-    else:
-        for idx, (name, price, tags, img) in catalog.items():
-            if kw in name.lower() or any(t in name.lower() for t in kw.split()) or kw in tags:
-                results.append((idx, name, price, tags, img))
+    for idx, (name, price, tags, item_colors) in catalog.items():
+        # 价格过滤
+        if max_price and price > max_price: continue
+        if min_price and price < min_price: continue
+        # 颜色过滤
+        if target_color and target_color not in item_colors: continue
+        # 关键词匹配
+        matched = False
+        for t in tags:
+            if t in kw: matched = True
+        if any(w in name.lower() for w in kw.split()): matched = True
+        # 价格/尺码/颜色查询不要求品类匹配
+        if max_price or min_price or target_color or target_size: matched = True
+        if matched:
+            results.append((idx, name, price, tags, item_colors))
 
     if not results:
-        results = [(idx, *catalog[idx]) for idx in catalog]
+        results = [(idx, name, price, tags, item_colors) for idx, (name, price, tags, item_colors) in catalog.items()]
 
-    lines = [f"🔍 「{keyword}」搜索结果："]
-    for idx, name, price, tags, img in results[:5]:
-        lines.append(f"  #{idx} {name} — ¥{price} ({tags})")
+    lines = []
+    filters = []
+    if target_color: filters.append(target_color)
+    if target_size: filters.append(f"{target_size}码")
+    if max_price: filters.append(f"{max_price}以内")
+    if min_price and max_price: filters.append(f"{min_price}-{max_price}")
+    filter_str = f"（{'/'.join(filters)}）" if filters else ""
+
+    lines.append(f"🔍 「{keyword}」{filter_str}共 {len(results)} 款：")
+    for idx, name, price, tags, colors in results[:5]:
+        color_str = "/".join(colors)
+        lines.append(f"  #{idx} {name} — ¥{price} | {color_str} | {tags[0]} | EU36-44")
     return "\n".join(lines)
 
 

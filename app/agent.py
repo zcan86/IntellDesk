@@ -3,7 +3,7 @@
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.memory import MemorySaver  # TODO: 升级为 SqliteSaver
 from app.config import settings
 
 # ── 电商客服 System Prompt ──────────────────────────────────
