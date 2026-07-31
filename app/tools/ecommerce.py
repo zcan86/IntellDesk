@@ -83,38 +83,32 @@ def track_delivery(order_id: str) -> str:
 
 
 @tool
-def return_guide(reason: str = "") -> str:
-    """查询退换货流程和条件。
+def process_return(order_id: str, reason: str = "", return_type: str = "退货退款") -> str:
+    """处理退换货申请。
 
-    当用户询问如何退货、退货条件、退款时效时调用。
+    当用户明确要求退货/退款/换货并提供了订单号时调用。
+    Agent 必须先确认用户意图（退货退款 vs 换货），再调用此工具。
 
     Args:
-        reason: 退货原因（可选），如"质量问题""尺码不合适"
+        order_id: 订单号
+        reason: 退换货原因（质量问题/尺码不合适/不想要/发错货）
+        return_type: 退货退款 / 退货 / 换货
     """
-    logger.info(f"🔄 退换货指引: {reason}")
+    logger.info(f"🔄 退换货申请: {order_id} {return_type} ({reason})")
+    from app.database import create_return_request
 
-    base = (
-        "🔄 速购电商退换货指引：\n\n"
-        "**退货政策**：签收后 7 天内无理由退货（特殊商品除外）\n"
-        "**换货政策**：签收后 15 天内质量问题可换货\n\n"
-        "**退货流程**：\n"
-        "1. App → 我的订单 → 申请退货\n"
-        "2. 填写原因并提交\n"
-        "3. 1-2 个工作日审核\n"
-        "4. 审核通过后获取退货地址\n"
-        "5. 寄回 → 仓库签收 → 1-3 工作日退款\n\n"
-    )
+    result = create_return_request(order_id, reason, return_type)
 
-    if "质量" in reason:
-        base += "⚠️ 质量问题：请上传商品照片作为凭证，商家承担来回运费。\n"
-    elif "尺码" in reason or "不合适" in reason:
-        base += "👕 尺码问题：适用 7 天无理由退货，买家承担寄回运费。\n"
-    elif "发错" in reason:
-        base += "📦 发错货：商家承担退回运费并重新发货，联系客服优先处理。\n"
-
-    base += "\n**退款时效**：微信/支付宝 1-3 工作日 | 银行卡 3-7 工作日 | 余额即时到账"
-
-    return base
+    if result["success"]:
+        return (
+            f"🔄 {return_type}申请\n"
+            f"  订单: {result['order']}\n"
+            f"  签收天数: {result['days_since_sign']} 天\n"
+            f"  原因: {reason}\n\n"
+            f"{result['steps']}"
+        )
+    else:
+        return f"❌ 无法申请{return_type}\n{result['reason']}"
 
 
 @tool

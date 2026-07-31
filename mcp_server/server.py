@@ -22,7 +22,7 @@ from loguru import logger
 # ── 从 IntelliDesk 导入全部工具 ──────────────────────────────
 from app.tools.knowledge_search import search_knowledge_base
 from app.tools.builtin_tools import get_weather, calculator, get_current_time
-from app.tools.ecommerce import query_order, track_delivery, return_guide, product_search
+from app.tools.ecommerce import query_order, track_delivery, process_return, product_search
 
 # 多模态工具（需要 VLM Key，不可用时不影响其他工具）
 try:
@@ -41,7 +41,11 @@ TOOL_REGISTRY = {
     "search_knowledge_base": lambda **args: search_knowledge_base.invoke(args.get("query", "")),
     "query_order": lambda **args: query_order.invoke(args.get("order_id", "")),
     "track_delivery": lambda **args: track_delivery.invoke(args.get("order_id", "")),
-    "return_guide": lambda **args: return_guide.invoke(args.get("reason", "")),
+    "process_return": lambda **args: process_return.invoke({
+        "order_id": args.get("order_id", ""),
+        "reason": args.get("reason", ""),
+        "return_type": args.get("return_type", "退货退款"),
+    }),
     "product_search": lambda **args: product_search.invoke(args.get("keyword", "")),
     "get_weather": lambda **args: get_weather.invoke(args.get("city", "")),
     "calculator": lambda **args: calculator.invoke(args.get("expression", "")),
@@ -62,8 +66,10 @@ TOOLS = [
      "inputSchema": {"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]}},
     {"name": "track_delivery", "description": "查询物流轨迹。用户询问快递到哪了时调用。",
      "inputSchema": {"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]}},
-    {"name": "return_guide", "description": "退换货流程指引。用户询问如何退货/换货时调用。",
-     "inputSchema": {"type": "object", "properties": {"reason": {"type": "string"}}}},
+    {"name": "process_return", "description": "处理退换货申请。用户提供订单号要求退货/换货时调用。先确认意图(退货退款vs换货)。",
+     "inputSchema": {"type": "object", "properties": {
+         "order_id": {"type": "string"}, "reason": {"type": "string"}, "return_type": {"type": "string"}
+     }, "required": ["order_id"]}},
     {"name": "product_search", "description": "搜索耐克鞋款。用户询问鞋子推荐/价格时调用。",
      "inputSchema": {"type": "object", "properties": {"keyword": {"type": "string"}}, "required": ["keyword"]}},
     {"name": "get_weather", "description": "查询城市天气。",

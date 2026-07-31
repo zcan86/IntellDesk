@@ -51,6 +51,17 @@ def init_db():
             name TEXT NOT NULL,
             phone TEXT
         );
+        CREATE TABLE IF NOT EXISTS return_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            return_id TEXT UNIQUE NOT NULL,
+            order_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            reason TEXT,
+            request_type TEXT DEFAULT '退货退款',
+            status TEXT DEFAULT '待审核',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        );
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_id TEXT UNIQUE NOT NULL,
@@ -117,3 +128,85 @@ def get_user(user_id: str) -> dict | None:
     row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def create_return_request(order_id: str, reason: str, request_type: str = "退货退款") -> dict:
+    """创建退换货申请，返回结果"""
+    conn = get_connection()
+
+    # 查订单
+    order = conn.execute(
+        "SELECT o.*, u.name FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?",
+        (order_id,),
+    ).fetchone()
+    if not order:
+        conn.close()
+        return {"success": False, "reason": f"订单 {order_id} 不存在"}
+
+    order = dict(order)
+
+    # 条件 1: 必须已签收
+    if order["status"] != "已签收":
+        conn.close()
+        return {
+            "success": False,
+            "reason": f"订单状态为「{order['status']}」, 无法申请退换货。只有已签收的订单才能退换。",
+        }
+
+    # 条件 2: 签收后 7 天内
+    from datetime import datetime, timedelta
+    try:
+        sign_date = datetime.strptime(order["created_at"][:10], "%Y-%m-%d")
+        days_since = (datetime.now() - sign_date).days
+    except Exception:
+        days_since = 0
+
+    if request_type in ("退货退款", "退货"):
+        if days_since > 7:
+            conn.close()
+            return {
+                "success": False,
+                "reason": f"已签收 {days_since} 天，超过 7 天无理由退货期限。可申请换货（15 天内质量问题）。",
+            }
+    elif request_type == "换货":
+        if days_since > 15:
+            conn.close()
+            return {
+                "success": False,
+                "reason": f"已签收 {days_since} 天，超过 15 天换货期限。",
+            }
+
+    # 条件 3: 创建退换货申请
+    return_id = f"RT{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    conn.execute(
+        "INSERT OR IGNORE INTO return_requests(return_id, order_id, user_id, reason, request_type, status, created_at) VALUES (?,?,?,?,?,?,?)",
+        (return_id, order_id, order["user_id"], reason, request_type, "待审核", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+    )
+    conn.commit()
+    conn.close()
+
+    shipping = {
+        "退货退款": "退回运费由买家承担（非质量问题）",
+        "退货": "退回运费由买家承担",
+        "换货": "退回运费由商家承担",
+    }
+
+    next_steps = [
+        f"✅ {request_type}申请已创建（编号：{return_id}）",
+        f"📦 请将商品寄回至：浙江省杭州市余杭区耐克退货中心（{shipping.get(request_type, '')}）",
+        "📋 审核预计 1-2 个工作日",
+    ]
+    if request_type in ("退货退款", "退货"):
+        next_steps.append("💵 审核通过后，仓库签收 1-3 工作日退款")
+    else:
+        next_steps.append("📦 审核通过后，2-3 工作日寄出新商品")
+
+    return {
+        "success": True,
+        "return_id": return_id,
+        "order": f"{order['product_name']} ¥{order['price']}",
+        "days_since_sign": days_since,
+        "reason": reason,
+        "type": request_type,
+        "steps": "\n".join(next_steps),
+    }
