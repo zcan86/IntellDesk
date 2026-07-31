@@ -20,10 +20,6 @@ from loguru import logger
 from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
-from app.tools.knowledge_search import search_knowledge_base
-from app.tools.builtin_tools import get_weather, calculator, get_current_time
-from app.tools.ecommerce import query_order, track_delivery, return_guide, product_search
-from app.tools.multimodal import recognize_image, transcribe_audio
 from app.agents.orchestrator import get_orchestrator, reset_orchestrator
 from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
@@ -53,39 +49,18 @@ _agent = None
 
 
 def get_agent():
-    """延迟初始化 Agent
-
-    USE_MCP=true  → 连接 MCP Server 动态加载工具
-    USE_MCP=false → 直接 import 本地工具（默认）
-    """
+    """延迟初始化 Agent — 工具全部通过 MCP Server 调用"""
     global _agent
     if _agent is None:
-        if settings.USE_MCP:
-            logger.info("正在初始化 Agent（MCP 模式）...")
-            from app.mcp_client import load_mcp_tools_sync
-            tools = load_mcp_tools_sync()
-            if not tools:
-                logger.warning("MCP 连接失败，降级为直接模式")
-                _agent = create_intellidesk_agent(
-                    tools=[search_knowledge_base, query_order, track_delivery,
-                           return_guide, product_search,
-                           recognize_image, transcribe_audio,
-                           get_weather, calculator, get_current_time]
-                )
-            else:
-                _agent = create_intellidesk_agent(tools=tools)
-            logger.info(f"Agent 就绪（MCP: {len(tools)} 工具）" if tools else "Agent 就绪（直接降级: 4 工具）")
-        else:
-            logger.info("正在初始化 Agent（直接模式）...")
-            _agent = create_intellidesk_agent(
-                tools=[
-                    search_knowledge_base,
-                    query_order, track_delivery, return_guide, product_search,
-                    recognize_image, transcribe_audio,  # 多模态
-                    get_weather, calculator, get_current_time,
-                ]
+        logger.info("正在连接 MCP Server 加载工具...")
+        from app.mcp_client import load_mcp_tools_sync
+        tools = load_mcp_tools_sync()
+        if not tools:
+            raise RuntimeError(
+                "MCP Server 未连接！请先启动: python mcp_server/server.py"
             )
-            logger.info("Agent 就绪（直接: 8 工具）")
+        _agent = create_intellidesk_agent(tools=tools)
+        logger.info(f"Agent 就绪（MCP: {len(tools)} 工具）")
     return _agent
 
 

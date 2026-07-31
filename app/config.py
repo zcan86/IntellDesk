@@ -52,9 +52,8 @@ class Settings(BaseSettings):
     AGENT_MAX_ITERATIONS: int = Field(5, description="Agent 最大工具调用轮数")
 
     # ================== MCP ====================
-    USE_MCP: bool = Field(False, description="是否启用 MCP 模式")
     MCP_SERVER_URL: str = Field(
-        "http://127.0.0.1:8100", description="远程 MCP Server 地址"
+        "http://127.0.0.1:8100", description="MCP Server 地址"
     )
 
     # ================== VLM 多模态 ====================

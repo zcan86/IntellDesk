@@ -1,0 +1,15 @@
+[Unit]
+Description=McpToolServer - MCP Tool Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/mcptoolserver
+EnvironmentFile=/opt/mcptoolserver/.env
+ExecStart=/usr/bin/python3 /opt/mcptoolserver/server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

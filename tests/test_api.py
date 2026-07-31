@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-"""API 接口测试"""
+"""API 接口测试（需要 MCP Server 运行）"""
 
 import sys
+import subprocess
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,6 +12,23 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from main import app
+
+_mcp_process = None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mcp_server():
+    """自动启动 MCP Server（测试会话级别）"""
+    global _mcp_process
+    project_root = Path(__file__).parent.parent
+    _mcp_process = subprocess.Popen(
+        [sys.executable, str(project_root / "mcp_server" / "server.py")],
+        cwd=str(project_root),
+    )
+    time.sleep(5)  # 等待启动
+    yield
+    _mcp_process.terminate()
+    _mcp_process.wait()
 
 
 @pytest.fixture
