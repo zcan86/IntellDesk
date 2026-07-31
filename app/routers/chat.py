@@ -20,7 +20,6 @@ from loguru import logger
 from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
-from app.agents.orchestrator import get_orchestrator, reset_orchestrator
 from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -157,21 +156,8 @@ async def chat_stream(req: ChatRequest):
 
         logger.info(f"[{session_id[:8]}] SSE 开始: {req.message[:100]}...")
 
-        # ── 多 Agent 调度 ──
-        orch = get_orchestrator()
-        plan = orch.plan_task(req.message)
-
         async def event_generator():
             """异步生成器：逐事件推送给前端"""
-            # 先发送调度计划
-            for agent_name in plan:
-                label = {
-                    "order": "订单Agent", "return": "售后Agent", "product": "商品Agent",
-                    "shipping": "物流Agent", "payment": "支付Agent", "account": "账号Agent",
-                    "general": "综合Agent"
-                }.get(agent_name, agent_name)
-                yield f"data: {json.dumps({'type': 'agent_start', 'agent': label, 'intent': agent_name}, ensure_ascii=False)}\n\n"
-
             try:
                 async for event in agent.astream_events(
                     {"messages": [("user", req.message)]},
@@ -197,17 +183,8 @@ async def chat_stream(req: ChatRequest):
                         tool_name = event.get("name", "unknown")
                         yield f"data: {json.dumps({'type': 'tool_end', 'tool': tool_name}, ensure_ascii=False)}\n\n"
 
-                # ── Agent 完成 + 轨迹 ──
-                for agent_name in reversed(plan):
-                    label = {
-                        "order": "订单Agent", "return": "售后Agent", "product": "商品Agent",
-                        "shipping": "物流Agent", "payment": "支付Agent", "account": "账号Agent",
-                        "general": "综合Agent"
-                    }.get(agent_name, agent_name)
-                    yield f"data: {json.dumps({'type': 'agent_end', 'agent': label}, ensure_ascii=False)}\n\n"
-
-                trace = orch.get_trace()
-                yield f"data: {json.dumps({'type': 'done', 'session_id': session_id, 'trace': trace}, ensure_ascii=False)}\n\n"
+                # ── 完成 ──
+                yield f"data: {json.dumps({'type': 'done', 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
             except Exception as e:
                 logger.exception(f"SSE 流中断: {e}")

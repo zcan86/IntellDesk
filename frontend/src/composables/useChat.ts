@@ -4,13 +4,12 @@ marked.setOptions({ breaks: true, gfm: true })
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
-export interface ChatMessage { role: 'user' | 'agent' | 'system'; content: string; toolStatus?: string; agentName?: string }
+export interface ChatMessage { role: 'user' | 'agent'; content: string; toolStatus?: string }
 
 export function useChat() {
   const messages = ref<ChatMessage[]>([])
   const isStreaming = ref(false)
   const sessionId = ref<string | null>(null)
-  const currentAgent = ref('')
 
   function addUserMessage(text: string) { messages.value.push({ role: 'user', content: text }) }
   function addAgentPlaceholder() { messages.value.push({ role: 'agent', content: '', toolStatus: '' }) }
@@ -56,9 +55,7 @@ export function useChat() {
           if (!line.startsWith('data: ')) continue
           try {
             const evt = JSON.parse(line.slice(6))
-            if (evt.type === 'agent_start') { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = evt.agent; currentAgent.value = evt.agent }
-            else if (evt.type === 'agent_end') { if (currentAgent.value) { const last = messages.value[messages.value.length - 1]; if (last && last.role === 'agent') last.toolStatus = ''; } currentAgent.value = '' }
-            else if (evt.type === 'token') appendToken(evt.content)
+            if (evt.type === 'token') appendToken(evt.content)
             else if (evt.type === 'tool_start') showTool(evt.tool)
             else if (evt.type === 'tool_end') hideTool()
             else if (evt.type === 'done') { finalizeAgent(); if (evt.session_id && !sessionId.value) sessionId.value = evt.session_id }
@@ -104,5 +101,5 @@ export function useChat() {
 
   function clearMessages() { messages.value = []; sessionId.value = null }
   function renderMarkdown(text: string) { return marked.parse(text) }
-  return { messages, isStreaming, sessionId, currentAgent, sendMessage, sendMultimodal, clearMessages, renderMarkdown }
+  return { messages, isStreaming, sessionId, sendMessage, sendMultimodal, clearMessages, renderMarkdown }
 }
