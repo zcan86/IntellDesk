@@ -165,6 +165,15 @@ async def chat(req: ChatRequest):
         if cached:
             reply, source = cached
             stats_record(session_id, source, len(req.message), _time.time() - t0)
+            # 写入 Agent 记忆，让后续对话能引用上下文（如"退款这笔"）
+            try:
+                agent = get_agent()
+                agent.update_state(
+                    {"configurable": {"thread_id": session_id}},
+                    {"messages": [("user", req.message), ("ai", reply)]},
+                )
+            except Exception:
+                pass
             return ChatResponse(reply=reply, session_id=session_id)
 
         # ── Agent ──
