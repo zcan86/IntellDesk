@@ -64,7 +64,7 @@ async function showOrders() {
       dlg.style.cssText += ';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.15);z-index:9999;max-width:700px;width:90%'
       dlg.onclick = () => dlg.remove()
     }, 10)
-  } catch(e) { alert('加载失败: '+e) }
+  } catch(e) { console.error(e); alert('加载失败: '+e) }
 }
 
 onMounted(loadSessions)
