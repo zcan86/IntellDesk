@@ -1,4 +1,4 @@
-# IntelliDesk — 电商智能客服 Agent
+# IntelliDesk — 多模态电商客服 Agent
 
 基于 **LangGraph Agent + Adaptive-RAG + MCP 协议 + SQLite** 的耐克电商客服系统。网关鉴权、4层请求路由、7工具、订单/退款/物流全链路、服务评价。
 
