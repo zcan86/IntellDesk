@@ -21,6 +21,7 @@ from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
 from app.router import route
+from app.stats import record as stats_record
 from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -138,18 +139,21 @@ async def chat(req: ChatRequest):
     - 后续调用传入 session_id 以在同一会话中继续对话
     """
     try:
+        t0 = _time.time()
         session_id = req.session_id or str(uuid.uuid4())
 
-        # ── 路由检查（Layer 1-3）──
         cached = route(req.message)
         if cached:
             reply, source = cached
-            logger.info(f"[{session_id[:8]}] 路由命中[{source}]: {req.message[:50]}")
+            stats_record(session_id, source, len(req.message), _time.time() - t0)
             return ChatResponse(reply=reply, session_id=session_id)
 
         # ── Agent ──
         agent = get_agent()
-        config = {"configurable": {"thread_id": session_id}}
+        config = {
+            "configurable": {"thread_id": session_id},
+            "recursion_limit": settings.AGENT_MAX_ITERATIONS * 2 + 3,
+        }
 
         if session_id not in _session_timestamps:
             _session_timestamps[session_id] = _time.time()
@@ -175,7 +179,8 @@ async def chat(req: ChatRequest):
         if not reply:
             reply = "抱歉，我暂时无法处理您的请求，请稍后再试。"
 
-        logger.info(f"[{session_id[:8]}] 回复: {reply[:100]}...")
+        tokens_est = len(reply) // 2  # 粗略估算（中文约2字符=1token）
+        stats_record(session_id, "agent", len(req.message), _time.time() - t0, tokens_est)
         return ChatResponse(reply=reply.strip(), session_id=session_id)
 
     except Exception as e:
@@ -227,7 +232,10 @@ async def chat_stream(req: ChatRequest):
 
         # ── Agent ──
         agent = get_agent()
-        config = {"configurable": {"thread_id": session_id}}
+        config = {
+            "configurable": {"thread_id": session_id},
+            "recursion_limit": settings.AGENT_MAX_ITERATIONS * 2 + 3,
+        }
 
         logger.info(f"[{session_id[:8]}] SSE Agent: {req.message[:100]}...")
 
@@ -350,6 +358,65 @@ async def upload_and_chat(
     except Exception as e:
         logger.exception(f"多模态处理失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── 用户画像 ────────────────────────────────────────────────
+
+@router.get("/profile/{user_id}")
+async def user_profile(user_id: str):
+    """用户画像：基本信息 + 订单汇总 + 偏好"""
+    from app.database import get_user, get_user_orders
+
+    user = get_user(user_id)
+    if not user:
+        return {"error": "用户不存在"}
+
+    orders = get_user_orders(user_id)
+    total_spent = sum(o["price"] for o in orders)
+    status_count = {}
+    for o in orders:
+        s = o["status"]
+        status_count[s] = status_count.get(s, 0) + 1
+
+    # 偏好分析
+    products = [o["product_name"] for o in orders]
+    favorite = max(set(products), key=products.count) if products else "暂无"
+
+    # 可退换订单
+    from datetime import datetime
+    returnable = []
+    for o in orders:
+        if o["status"] == "已签收":
+            try:
+                sign = datetime.strptime(o["created_at"][:10], "%Y-%m-%d")
+                days = (datetime.now() - sign).days
+                if days <= 7:
+                    returnable.append(o["order_id"])
+            except Exception:
+                pass
+
+    return {
+        "user": user,
+        "total_orders": len(orders),
+        "total_spent": total_spent,
+        "favorite_product": favorite,
+        "status_breakdown": status_count,
+        "returnable_orders": returnable,
+        "member_level": (
+            "钻石" if total_spent >= 10000 else
+            "金卡" if total_spent >= 5000 else
+            "银卡" if total_spent >= 2000 else "普通"
+        ),
+    }
+
+
+# ── 统计 ────────────────────────────────────────────────────
+
+@router.get("/stats")
+async def api_stats():
+    """Token 用量 + 请求统计"""
+    from app.stats import get_summary
+    return get_summary()
 
 
 # ── 会话管理 ────────────────────────────────────────────────

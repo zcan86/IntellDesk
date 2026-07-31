@@ -6,7 +6,61 @@ Layer 2: 透传 Agent（复杂问题/多跳推理）
 """
 
 import re
+import numpy as np
 from loguru import logger
+
+# ── 语义匹配（延迟初始化，复用 ChromaDB 基础设施）─────────────
+
+_semantic_ready = False
+_semantic_qa: list[tuple[str, str]] = []  # [(question, answer), ...]
+_semantic_matrix = None
+_semantic_vectorizer = None
+
+
+def _init_semantic():
+    """初始化语义 QA 缓存（使用轻量 TF-IDF，复用已有依赖）"""
+    global _semantic_ready, _semantic_matrix, _semantic_vectorizer, _semantic_qa
+    if _semantic_ready:
+        return
+
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    # FAQ 问答对（问题 → 答案）
+    _semantic_qa = [
+        ("退货流程", "签收7天内可无理由退货。流程：App申请→审核→寄回→仓库签收→1-3工作日退款。"),
+        ("换货流程", "签收15天内质量问题可换货。流程：App申请换货→审核→寄回→2-3工作日寄出新商品。"),
+        ("包邮条件", "全国满¥99包邮，偏远地区(新疆/西藏/青海/宁夏)满¥199包邮。"),
+        ("发货时间", "当日16:00前下单当天发货，16:00后次日发货。"),
+        ("尺码范围", "EU 36-44码，男女款均有。请提供具体商品名查询库存。"),
+        ("支付方式", "支持微信、支付宝、银行卡、平台余额。不支持货到付款。"),
+        ("退款到账时间", "微信/支付宝1-3工作日，银行卡3-7工作日，余额即时到账。"),
+        ("会员权益", "普通(注册享包邮)/银卡(年消费¥2000+,9.5折)/金卡(¥5000+,9折免运费)/钻石(¥10000+,8.5折)"),
+        ("门店地址", "线下体验店：北京/上海/广州/深圳/杭州。"),
+        ("客服电话", "人工客服：400-888-6666（每天9:00-21:00）。"),
+    ]
+
+    _semantic_vectorizer = TfidfVectorizer(ngram_range=(1, 2), analyzer="char_wb")
+    questions = [q for q, _ in _semantic_qa]
+    _semantic_matrix = _semantic_vectorizer.fit_transform(questions)
+    _semantic_ready = True
+    logger.info(f"语义路由就绪: {len(_semantic_qa)} 条FAQ")
+
+
+def _semantic_match(text: str, threshold: float = 0.35) -> str | None:
+    """TF-IDF 语义匹配"""
+    _init_semantic()
+    try:
+        from sklearn.metrics.pairwise import cosine_similarity
+        q_vec = _semantic_vectorizer.transform([text])
+        scores = cosine_similarity(q_vec, _semantic_matrix).flatten()
+        best_idx = int(np.argmax(scores))
+        if scores[best_idx] >= threshold:
+            logger.info(f"  [路由] 语义命中: {_semantic_qa[best_idx][0]} (score={scores[best_idx]:.3f})")
+            return _semantic_qa[best_idx][1]
+    except Exception:
+        pass
+    return None
 
 # ── Layer 1: 精确匹配缓存 ────────────────────────────────────
 
@@ -137,5 +191,10 @@ def route(text: str) -> tuple[str, str] | None:
     if result:
         return (result, "keyword")
 
-    # 4. 未命中 → 透传 Agent
+    # 4. 语义匹配（Layer 2）
+    result = _semantic_match(msg)
+    if result:
+        return (result, "semantic")
+
+    # 5. 未命中 → 透传 Agent
     return None

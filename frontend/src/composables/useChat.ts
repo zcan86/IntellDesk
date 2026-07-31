@@ -3,6 +3,7 @@ import { marked } from 'marked'
 marked.setOptions({ breaks: true, gfm: true })
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
+const API_KEY = import.meta.env.VITE_API_KEY || 'sk-intellidesk-demo'
 
 export interface ChatMessage { role: 'user' | 'agent'; content: string; toolStatus?: string }
 
@@ -43,7 +44,7 @@ export function useChat() {
     addAgentPlaceholder()
     try {
       const resp = await fetch(`${API_BASE}/api/chat/stream`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({ message: text, session_id: sessionId.value }),
       })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
@@ -78,7 +79,7 @@ export function useChat() {
     addAgentPlaceholder()
 
     try {
-      const resp = await fetch(`${API_BASE}/api/chat/upload`, { method: 'POST', body: form })
+      const resp = await fetch(`${API_BASE}/api/chat/upload`, { method: 'POST', headers: { 'X-API-Key': API_KEY }, body: form })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
       while (true) {

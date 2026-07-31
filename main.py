@@ -13,6 +13,7 @@ from loguru import logger
 
 from app.config import settings
 from app.routers import chat
+from app.gateway import check_auth, check_rate_limit
 
 
 @asynccontextmanager
@@ -44,13 +45,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS（前后端分离，允许前端跨域）
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# 网关中间件
+@app.middleware("http")
+async def gateway_middleware(request, call_next):
+    check_auth(request)
+    check_rate_limit(request)
+    return await call_next(request)
+
 
 # API 路由
 app.include_router(chat.router)
