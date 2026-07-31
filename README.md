@@ -1,4 +1,4 @@
-#  IntelliDesk — 电商智能客服 Agent
+# IntelliDesk — 电商智能客服 Agent
 
 基于 **LangGraph Agent + Adaptive-RAG + MCP 协议 + SQLite** 的耐克电商客服系统。网关鉴权、4层请求路由、7工具、订单/退款/物流全链路、服务评价。
 
@@ -6,13 +6,13 @@
 
 ## 功能
 
--  **Adaptive-RAG 检索**：BM25 + BGE-m3 混合检索 + RRF 融合 + LLM Rerank
--  **电商工具链**：订单查询、物流跟踪、退换货处理、商品搜索
--  **SSE 流式输出**：打字机效果 + 工具调用过程实时可见
--  **多轮记忆**：5轮滑动窗口 + 60分钟 TTL + 手动清除
--  **网关层**：API Key 鉴权 + IP 限流 + LLM 并发排队（Semaphore 5）
--  **4层请求路由**：精确→关键词→语义→Agent，40%请求零LLM成本
--  **Token统计** + **用户画像** + **服务评价**
+- **Adaptive-RAG 检索**：BM25 + BGE-m3 混合检索 + RRF 融合 + LLM Rerank
+- **电商工具链**：订单查询、物流跟踪、退换货处理、商品搜索
+- **SSE 流式输出**：打字机效果 + 工具调用过程实时可见
+- **多轮记忆**：5轮滑动窗口 + 60分钟 TTL + 手动清除
+- **网关层**：API Key 鉴权 + IP 限流 + LLM 并发排队（Semaphore 5）
+- **4层请求路由**：精确→关键词→语义→Agent，40%请求零LLM成本
+- **Token统计** + **用户画像** + **服务评价**
 
 ---
 
@@ -20,11 +20,11 @@
 
 ```
 用户请求
-  → 网关 (鉴权 + 限流 + 排队)
-  → 路由 (精确14条 → 关键词12条 → 语义FAQs → Agent)
-  → 执行 (ReAct + 工具限制 + MCP Server)
-  → 输出 (SSE流式 + Token统计)
-  → 反馈 (打星 + 评论)
+ → 网关 (鉴权 + 限流 + 排队)
+ → 路由 (精确14条 → 关键词12条 → 语义FAQs → Agent)
+ → 执行 (ReAct + 工具限制 + MCP Server)
+ → 输出 (SSE流式 + Token统计)
+ → 反馈 (打星 + 评论)
 ```
 
 | 层级 | 技术 |
@@ -42,14 +42,14 @@
 
 ```bash
 # 终端 1: MCP Server
-python mcp_server/server.py          # → :8100
+python mcp_server/server.py     # → :8100
 
 # 终端 2: Agent
-cp .env.example .env                 # 填入 API Keys
-python main.py                       # → :8000
+cp .env.example .env         # 填入 API Keys
+python main.py            # → :8000
 
 # 终端 3: 前端
-cd frontend && npm install && npm run dev  # → :5173
+cd frontend && npm install && npm run dev # → :5173
 ```
 
 ---
@@ -58,21 +58,21 @@ cd frontend && npm install && npm run dev  # → :5173
 
 ```
 ├── app/
-│   ├── agent.py              # Agent System Prompt
-│   ├── config.py             # 全局配置
-│   ├── database.py           # SQLite (users/orders/returns/feedback)
-│   ├── gateway.py            # 鉴权 + 限流
-│   ├── router.py             # 4层请求路由
-│   ├── stats.py              # Token统计
-│   ├── rag/                  # 检索（ChromaDB+BM25+RRF+Rerank）
-│   ├── routers/chat.py       # 全部 API 端点
-│   ├── tools/                # 工具实现（不直接import,走MCP）
-│   └── mcp_client.py         # MCP Client
-├── mcp_server/               # MCP Tool Server (独立进程)
-├── frontend/                 # Vue 3 前端
-├── docs/                     # 12份知识文档 + 产品文档
-├── tests/                    # 21个测试
-└── data/                     # SQLite DB + 商品图片
+│  ├── agent.py       # Agent System Prompt
+│  ├── config.py       # 全局配置
+│  ├── database.py      # SQLite (users/orders/returns/feedback)
+│  ├── gateway.py      # 鉴权 + 限流
+│  ├── router.py       # 4层请求路由
+│  ├── stats.py       # Token统计
+│  ├── rag/         # 检索（ChromaDB+BM25+RRF+Rerank）
+│  ├── routers/chat.py    # 全部 API 端点
+│  ├── tools/        # 工具实现（不直接import,走MCP）
+│  └── mcp_client.py     # MCP Client
+├── mcp_server/        # MCP Tool Server (独立进程)
+├── frontend/         # Vue 3 前端
+├── docs/           # 12份知识文档 + 产品文档
+├── tests/          # 21个测试
+└── data/           # SQLite DB + 商品图片
 ```
 
 ---
