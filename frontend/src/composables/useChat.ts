@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { marked } from 'marked'
 marked.setOptions({ breaks: true, gfm: true })
 
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+
 export interface ChatMessage { role: 'user' | 'agent' | 'system'; content: string; toolStatus?: string; agentName?: string }
 
 export function useChat() {
@@ -41,7 +43,7 @@ export function useChat() {
     addUserMessage(text)
     addAgentPlaceholder()
     try {
-      const resp = await fetch('/api/chat/stream', {
+      const resp = await fetch(`${API_BASE}/api/chat/stream`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, session_id: sessionId.value }),
       })
@@ -79,7 +81,7 @@ export function useChat() {
     addAgentPlaceholder()
 
     try {
-      const resp = await fetch('/api/chat/upload', { method: 'POST', body: form })
+      const resp = await fetch(`${API_BASE}/api/chat/upload`, { method: 'POST', body: form })
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Error')
       const reader = resp.body!.getReader(); const decoder = new TextDecoder(); let buf = ''
       while (true) {
