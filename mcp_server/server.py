@@ -21,7 +21,7 @@ from loguru import logger
 
 # ── 从 IntelliDesk 导入全部工具 ──────────────────────────────
 from app.tools.knowledge_search import search_knowledge_base
-from app.tools.builtin_tools import get_weather, calculator, get_current_time
+from app.tools.builtin_tools import calculator, get_current_time
 from app.tools.ecommerce import query_order, track_delivery, process_return, product_search
 
 # 多模态工具（需要 VLM Key，不可用时不影响其他工具）
@@ -47,7 +47,6 @@ TOOL_REGISTRY = {
         "return_type": args.get("return_type", "退货退款"),
     }),
     "product_search": lambda **args: product_search.invoke(args.get("keyword", "")),
-    "get_weather": lambda **args: get_weather.invoke(args.get("city", "")),
     "calculator": lambda **args: calculator.invoke(args.get("expression", "")),
     "get_current_time": lambda **args: get_current_time.invoke({}),
 }
@@ -72,8 +71,6 @@ TOOLS = [
      }, "required": ["order_id"]}},
     {"name": "product_search", "description": "搜索耐克鞋款。用户询问鞋子推荐/价格时调用。",
      "inputSchema": {"type": "object", "properties": {"keyword": {"type": "string"}}, "required": ["keyword"]}},
-    {"name": "get_weather", "description": "查询城市天气。",
-     "inputSchema": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}},
     {"name": "calculator", "description": "数学计算。",
      "inputSchema": {"type": "object", "properties": {"expression": {"type": "string"}}, "required": ["expression"]}},
     {"name": "get_current_time", "description": "获取当前时间。",
