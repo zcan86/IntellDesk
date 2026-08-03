@@ -27,6 +27,9 @@ Agent 状态只有 messages：
 |---|---|---|
 | DeepSeek 间歇性不调工具 | `**kwargs` 签名 → langchain 生成空壳 schema | `_make_args_model` 用 MCP inputSchema 生成具名参数 |
 | 知识库无限膨胀 | `build_index` 用 `from_texts` 每次追加 | 优先加载已有索引，幂等 |
+| 多实例并发重复追加 | 后端/MCP 双实例连同一 SQLite，`count()` 遇锁报错→回退重建 | 校验失败时**跳过重建**，杜绝并发追加 |
+
+> **运行发现**：后端（uvicorn reload）与 MCP 的启动机制可能产生多个 python 实例并发访问同一 `data/chroma_db`。幂等加载 + 校验失败跳过重建，双保险保证索引块数稳定（验证 35 块不随重启增长）。
 | 前端新对话不切页 | sessionId 为 null 时不触发 watch | resetKey 递增计数强制清空 |
 
 ---

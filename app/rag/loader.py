@@ -130,6 +130,8 @@ def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> boo
     contents = [c["content"] for c in chunks]
 
     # 2. 向量索引：优先加载已有索引，避免 from_texts 重复追加导致集合无限膨胀
+    # 注意：加载/校验任何异常都跳过重建——多实例并发连同一 SQLite 时
+    # count() 可能因锁报错，若此时回退 from_texts 会重复追加（历史 bug 根源）
     if not force_rebuild and Path(persist_dir).exists():
         try:
             _vector_store = Chroma(
@@ -138,14 +140,14 @@ def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> boo
                 persist_directory=persist_dir,
             )
             count = _vector_store._collection.count()
-            if count > 0:
-                logger.info(f"  加载已有向量索引: {count} 个块（跳过重复构建）")
-                _init_bm25(contents)
-                return True
-            _vector_store = None  # 集合存在但为空 → 继续构建
         except Exception as e:
-            logger.warning(f"  加载已有索引失败，将重新构建: {e}")
-            _vector_store = None
+            logger.warning(f"  校验已有索引失败（{e}），跳过重建以避免重复追加")
+            return True
+        if count > 0:
+            logger.info(f"  加载已有向量索引: {count} 个块（跳过重复构建）")
+            _init_bm25(contents)
+            return True
+        _vector_store = None  # 集合存在但为空 → 继续构建
 
     # 2'. 首次构建或强制重建
     logger.info(f"  正在构建 ChromaDB 向量索引（{len(chunks)} 个块）...")
