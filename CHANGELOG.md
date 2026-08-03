@@ -24,7 +24,7 @@
 - **Agent 状态显式建模**：新增 `AgentState`（`messages` + `order_context` + `intent`）传给 `create_agent`；请求层 `analyze_request` 提取订单号/意图播种状态，并以「【订单上下文】」SystemMessage 注入对话，LLM 不再从文本推断订单号；路由命中写记忆时同步播种显式字段（`app/agent.py` / `app/router.py` / `app/routers/chat.py`）
 - 测试增至 32 例（新增 `tests/test_context.py` 守护订单上下文播种逻辑）
 - **知识库并发加固**：`build_index` 校验已有索引失败时跳过重建，防止多实例（后端 reload + MCP 双进程）并发访问同一 SQLite 时 `count()` 遇锁报错回退重复追加（`app/rag/loader.py`）
-- 开发文档新增 `docs/dev/phase13-agent-state-architecture.md`；**约定：后续每次改动同步更新开发文档**
+- 开发文档新增 `docs/dev/phase13-agent-state-architecture.md`、`docs/dev/architecture-overview.md`（架构解析：分层/技术选型理由/搭建顺序）；**约定：后续每次改动同步更新开发文档**
 
 ### Removed
 - 删除 `docs/项目总结-简历版.md`
