@@ -98,4 +98,4 @@ git push -u origin main
 - [x] 21 个测试用例全部通过
 - [x] Docker 一键部署
 - [x] README.md 完整文档
-- [x] 6 份知识文档（docs/knowledge/）
+- [x] 6 份知识文档（后移至 docs/dev/）
