@@ -33,7 +33,7 @@
 |---|---|
 | 前端 | Vue 3 + Element Plus + Vite + fontsource 字体（盒中速递设计系统） |
 | 后端 | FastAPI + Pydantic |
-| Agent | LangGraph + DeepSeek |
+| Agent | LangGraph + DeepSeek（显式 AgentState：messages/order_context/intent） |
 | 检索 | BM25 + BGE-m3 + RRF + LLM Rerank |
 | 工具协议 | MCP (HTTP, 独立进程 :8100) |
 | 多模态 | Qwen-VL-Max（阿里百炼）+ Whisper 语音转文字 |
@@ -79,8 +79,9 @@ cd frontend && npm install && npm run dev     # → :5173
 ├── mcp_server/        # MCP Tool Server (独立进程 :8100)
 ├── frontend/         # Vue 3 前端（盒中速递设计系统 + SwooshMark 签名）
 ├── docs/           # dev/ 开发文档 + products/ 业务文档（RAG 仅索引 products/）
-├── tests/          # 25个测试（API 5 + 检索 7 + 工具 9 + MCP schema 4）
-└── data/           # SQLite DB + 商品图片
+├── tests/          # 32个测试（API 5 + 检索 7 + 工具 9 + MCP schema 4 + 上下文 7）
+├── data/           # SQLite DB + 商品图片
+└── CLAUDE.md       # 项目开发约定（开发文档同步规则 / 环境 / 提交纪律）
 ```
 
 ---
@@ -128,7 +129,7 @@ cd frontend && npm install && npm run dev     # → :5173
 | Agent 响应 | 4.6s 平均（4.1-5.4s，含完整工具调用循环） |
 | 工具调用可靠性 | 100%（3/3 复测，修复 MCP args_schema 后） |
 | Token 节省 | 88% (vs 全走Agent) |
-| 测试覆盖 | 25 用例 |
+| 测试覆盖 | 32 用例 |
 
 > 数据说明：缓存响应 3ms 为 HTTP 层实测（含网络往返）；Agent 响应为主模型（DeepSeek）两次推理往返耗时，本地工具调用为毫秒级。工具调用可靠性经修复 `app/mcp_client.py` 空壳 schema 后从 0-33% 提升至 100%。
 
