@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import SwooshMark from './SwooshMark.vue'
 
-const props = defineProps<{ sessionId: string | null; collapsed: boolean }>()
-const emit = defineEmits<{ selectSession: [id: string | null] }>()
-
 interface Session { id: string; title: string; time: number }
-const sessions = ref<Session[]>([])
 
-function loadSessions() {
-  try { sessions.value = JSON.parse(localStorage.getItem('intellidesk_sessions') || '[]') }
-  catch { sessions.value = [] }
-}
+const props = defineProps<{ sessionId: string | null; collapsed: boolean; sessions: Session[] }>()
+const emit = defineEmits<{ selectSession: [id: string | null]; deleteSession: [id: string] }>()
 
 function selectSession(s: Session) {
   emit('selectSession', s.id)
@@ -24,9 +17,7 @@ function newChat() {
 
 function deleteSession(id: string, e: Event) {
   e.stopPropagation()
-  sessions.value = sessions.value.filter(s => s.id !== id)
-  localStorage.setItem('intellidesk_sessions', JSON.stringify(sessions.value))
-  if (props.sessionId === id) emit('selectSession', null)
+  emit('deleteSession', id)
 }
 
 function formatTime(ts: number) {
@@ -36,8 +27,6 @@ function formatTime(ts: number) {
   if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前'
   return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
-
-onMounted(loadSessions)
 </script>
 
 <template>

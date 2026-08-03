@@ -7,11 +7,12 @@ import WelcomeScreen from './WelcomeScreen.vue'
 import { useChat } from '../composables/useChat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const props = defineProps<{ sessionId: string | null; sidebarCollapsed: boolean }>()
-const emit = defineEmits<{ toggleSidebar: []; sessionCreated: [id: string] }>()
+const props = defineProps<{ sessionId: string | null; resetKey: number; sidebarCollapsed: boolean }>()
+const emit = defineEmits<{ toggleSidebar: []; sessionCreated: [id: string, title: string] }>()
 
 const { messages, isStreaming, sessionId, sendMessage, sendMultimodal, clearMessages } = useChat()
 const inputText = ref('')
+const sessionTitle = ref('')
 const msgContainer = ref<HTMLElement>()
 const fileInput = ref<HTMLInputElement>()
 const rating = ref(0)
@@ -42,15 +43,28 @@ function sendOrderMsg(oid: string) {
   ordersPanel.value = false
 }
 
-watch(() => props.sessionId, (val) => { if (val === null) { clearMessages(); rating.value = 0; ratingComment.value = ''; ratingSubmitted.value = false } })
+// 「新对话」/删除当前会话 → App 递增 resetKey，这里强制清空
+// 用计数而非 sessionId 值变化判断，避免 sessionId 原本就是 null 时不触发
+watch(() => props.resetKey, () => {
+  clearMessages()
+  rating.value = 0
+  ratingComment.value = ''
+  ratingSubmitted.value = false
+})
 watch(() => messages.value.length, async () => {
   await nextTick()
   msgContainer.value?.scrollTo({ top: msgContainer.value.scrollHeight, behavior: 'smooth' })
 })
+// 会话创建后同步给 App（侧栏高亮 + 历史保存 + 「新对话」清空消息依赖此状态）
+watch(sessionId, (val) => { if (val) emit('sessionCreated', val, sessionTitle.value) })
 
 function doSend() {
   const text = inputText.value.trim()
   if (!text || isStreaming.value) return
+  // 新会话的首条消息作为历史标题
+  if (!sessionId.value && !messages.value.length) {
+    sessionTitle.value = text.slice(0, 30)
+  }
   inputText.value = ''
   sendMessage(text)
 }
