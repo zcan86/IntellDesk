@@ -13,6 +13,8 @@ import asyncio
 import json as json_module
 from pathlib import Path
 
+from langchain_core.messages import SystemMessage
+
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -32,7 +34,7 @@ def _sem_get() -> asyncio.Semaphore:
 from app.agent import create_intellidesk_agent
 from app.config import settings
 from app.rag.loader import build_index, get_index_status
-from app.router import route
+from app.router import route, analyze_request
 from app.stats import record as stats_record
 from app.tools.multimodal import recognize_image, transcribe_audio, save_upload
 
@@ -60,6 +62,27 @@ class ReindexResponse(BaseModel):
 # ── Agent 单例 ──────────────────────────────────────────────
 _agent = None
 _session_timestamps: dict[str, float] = {}  # thread_id → 创建时间
+
+
+def _build_state_input(text: str) -> dict:
+    """构建 Agent 初始状态：播种订单上下文 / 意图到显式 state 字段
+
+    - order_context / intent 写入 AgentState（显式建模，供工具/后续读取）
+    - 同时以「【订单上下文】」SystemMessage 注入对话，
+      LLM 直接读取，不再从历史文本里推断订单号（跨轮记忆天然保留）
+    """
+    ctx = analyze_request(text)
+    state: dict = {"messages": [("user", text)]}
+    if ctx.get("order_id") or ctx["intent"] != "general":
+        state["order_context"] = ctx
+        state["intent"] = ctx["intent"]
+        state["messages"].insert(
+            0,
+            SystemMessage(
+                content=f"【订单上下文】{json.dumps(ctx, ensure_ascii=False)}"
+            ),
+        )
+    return state
 
 import time as _time
 
@@ -206,7 +229,7 @@ async def chat(req: ChatRequest):
             try:
                 result = await asyncio.wait_for(
                     agent.ainvoke(
-                        {"messages": [("user", req.message)]},
+                        _build_state_input(req.message),
                         config=config,
                     ),
                     timeout=settings.LLM_TIMEOUT_SECONDS,
@@ -291,7 +314,7 @@ async def chat_stream(req: ChatRequest):
             """异步生成器：逐事件推送给前端"""
             try:
                 async for event in agent.astream_events(
-                    {"messages": [("user", req.message)]},
+                    _build_state_input(req.message),
                     config=config,
                     version="v2",
                 ):
@@ -386,7 +409,7 @@ async def upload_and_chat(
             yield sse({"type": "token", "content": f"[{msg_type}] {file.filename}\n"})
             try:
                 async for event in agent.astream_events(
-                    {"messages": [("user", full_msg)]}, config=config, version="v2"
+                    _build_state_input(full_msg), config=config, version="v2"
                 ):
                     kind = event.get("event", "")
                     if kind == "on_chat_model_stream":

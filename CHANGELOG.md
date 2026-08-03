@@ -21,6 +21,8 @@
 - 环境重建：原 venv 依赖的 miniconda 已移除，改用系统 Python 3.14 重建 venv 并重装依赖
 - `langchain-core` 降至 **1.4.9**，匹配 `langchain 1.3.14` + `langchain-openai 1.4.0`（1.5.x 引入工具调用回归）
 - README 同步：9 工具、多模态识别、设计系统、项目结构、环境搭建说明
+- **Agent 状态显式建模**：新增 `AgentState`（`messages` + `order_context` + `intent`）传给 `create_agent`；请求层 `analyze_request` 提取订单号/意图播种状态，并以「【订单上下文】」SystemMessage 注入对话，LLM 不再从文本推断订单号（`app/agent.py` / `app/router.py` / `app/routers/chat.py`）
+- 测试增至 32 例（新增 `tests/test_context.py` 守护订单上下文播种逻辑）
 
 ### Removed
 - 删除 `docs/项目总结-简历版.md`

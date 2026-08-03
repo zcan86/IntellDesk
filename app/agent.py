@@ -1,10 +1,29 @@
 # -*- coding: utf-8 -*-
 """IntelliDesk Agent 核心 — 电商客服单 Agent + 多工具"""
 
+from typing import Annotated, Any, TypedDict
+
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import MemorySaver  # TODO: 升级为 SqliteSaver
+from langgraph.graph.message import add_messages
 from app.config import settings
+
+
+# ── 显式会话状态 ──────────────────────────────────────────────
+class AgentState(TypedDict):
+    """Agent 显式状态：消息 + 订单上下文 + 意图
+
+    - messages:       对话消息（多轮记忆）
+    - order_context:  当前处理的订单上下文（订单号/意图等），由请求层分析器播种
+    - intent:         已识别的意图分类
+
+    订单上下文会由请求层以「【订单上下文】」SystemMessage 注入对话，
+    同时保存在本字段中供显式建模 / 后续工具读取。
+    """
+    messages: Annotated[list, add_messages]
+    order_context: dict[str, Any]
+    intent: str
 
 # ── 电商客服 System Prompt ──────────────────────────────────
 SYSTEM_PROMPT = """你是耐克官方旗舰店的智能客服主管，名叫「小速」。
@@ -24,6 +43,7 @@ SYSTEM_PROMPT = """你是耐克官方旗舰店的智能客服主管，名叫「�
 - 闲聊/问候 → 直接回复
 
 ### 2. 上下文推断
+当收到以【订单上下文】开头的系统消息时，**直接使用其中给出的 order_id 和 intent**，不要重复询问、不要再从历史推断。
 当用户说"这笔订单""这个""它"等指代词时，**必须先检查对话历史**中最近出现的订单号。
 例如：用户刚查了 DD20240731002，然后说"退款这笔"→ 订单号就是 DD20240731002。
 不要重复询问已提供的订单号。
@@ -75,6 +95,7 @@ def create_intellidesk_agent(tools: list | None = None):
         tools=tools or [],
         system_prompt=SYSTEM_PROMPT,
         checkpointer=MemorySaver(),
+        state_schema=AgentState,
     )
 
     return agent

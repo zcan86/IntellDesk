@@ -165,6 +165,35 @@ def _query_order_direct(text: str) -> str | None:
     )
 
 
+# ── 请求上下文提取（Agent 显式状态播种）───────────────────────
+
+INTENT_KEYWORDS: dict[str, list[str]] = {
+    "return": ["退货", "退款", "换货", "售后", "退换"],
+    "order": ["订单", "查一下", "状态", "下单", "查询"],
+    "product": ["推荐", "多少钱", "价格", "哪款", "适合", "鞋", "预算"],
+    "shipping": ["物流", "快递", "运费", "包邮", "发货", "到哪", "配送"],
+    "general": [],
+}
+
+
+def analyze_request(text: str) -> dict:
+    """提取请求上下文：订单号（正则）+ 意图（关键词规则）
+
+    用于给 Agent state 的 order_context / intent 字段播种，
+    让订单上下文显式建模，而非依赖 LLM 从文本里推断。
+    """
+    m = ORDER_PATTERN.search(text)
+    order_id = m.group(1) if m else None
+
+    intent = "general"
+    for name, keywords in INTENT_KEYWORDS.items():
+        if any(k in text for k in keywords):
+            intent = name
+            break
+
+    return {"order_id": order_id, "intent": intent}
+
+
 # ── 路由入口 ──────────────────────────────────────────────────
 
 def route(text: str) -> tuple[str, str] | None:
