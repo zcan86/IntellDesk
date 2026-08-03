@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { Fold, Promotion, Picture, Microphone, StarFilled } from '@element-plus/icons-vue'
+import { Fold, Expand, Picture, Microphone, StarFilled, List } from '@element-plus/icons-vue'
+import SwooshMark from './SwooshMark.vue'
 import ChatMessage from './ChatMessage.vue'
 import WelcomeScreen from './WelcomeScreen.vue'
 import { useChat } from '../composables/useChat'
@@ -94,74 +95,252 @@ async function onFileChange(e: Event) {
 <template>
   <div class="chat-view">
     <header class="topbar">
-      <el-button :icon="Fold" text @click="emit('toggleSidebar')" />
-      <h1>IntelliDesk 智能客服</h1>
-      <span class="status" :class="{ streaming: isStreaming }">{{ isStreaming ? '...' : 'ready' }}</span>
+      <button class="icon-btn" @click="emit('toggleSidebar')" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'">
+        <el-icon><Expand v-if="sidebarCollapsed" /><Fold v-else /></el-icon>
+      </button>
+      <div class="brand-line">
+        <span class="brand-dot" :class="{ streaming: isStreaming }" />
+        <span class="brand-name">小速</span>
+        <span class="brand-sub">{{ isStreaming ? '正在思考…' : '在线 · 有问必答' }}</span>
+      </div>
     </header>
 
     <div class="messages" ref="msgContainer">
-      <WelcomeScreen v-if="!messages.length" @suggestion="(m: string) => { inputText = m; doSend() }" />
-      <ChatMessage v-for="(msg, i) in messages" :key="i" :message="msg" :is-last="i === messages.length - 1" :is-streaming="isStreaming && i === messages.length - 1" />
+      <div class="messages-inner">
+        <WelcomeScreen v-if="!messages.length" @suggestion="(m: string) => { inputText = m; doSend() }" />
+        <ChatMessage
+          v-for="(msg, i) in messages"
+          :key="i"
+          :message="msg"
+          :is-last="i === messages.length - 1"
+          :is-streaming="isStreaming && i === messages.length - 1"
+        />
+      </div>
     </div>
 
     <!-- 订单面板 -->
     <div class="orders-panel">
-      <el-button size="small" text @click="loadOrders">{{ ordersPanel ? '收起' : '我的订单' }}</el-button>
+      <button class="orders-toggle" @click="loadOrders">
+        <el-icon :size="14"><List /></el-icon> {{ ordersPanel ? '收起订单' : '我的订单' }}
+      </button>
       <div v-if="ordersPanel && ordersData.length" class="orders-list">
         <div v-for="o in ordersData" :key="o.order_id" class="order-row" @click="sendOrderMsg(o.order_id)">
           <span class="order-id">{{ o.order_id }}</span>
           <span class="order-item">{{ o.product_name }}</span>
-          <span :class="'order-status status-'+o.status">{{ o.status }}</span>
-          <span class="order-send">发送</span>
+          <span class="order-status" :class="'st-' + o.status">{{ o.status }}</span>
+          <span class="order-send">去问 <span class="send-arrow">→</span></span>
         </div>
       </div>
-      <span v-if="ordersPanel && !ordersData.length" style="font-size:12px;color:#999">暂无订单</span>
+      <span v-if="ordersPanel && !ordersData.length" class="orders-empty">暂无订单</span>
     </div>
 
     <!-- 评价栏 -->
     <div v-if="messages.length > 0 && !isStreaming" class="rating-bar">
       <template v-if="!ratingSubmitted">
-        <span class="rating-label">服务评价：</span>
+        <span class="rating-label">这次服务怎么样？</span>
         <span v-for="s in 5" :key="s" class="star" :class="{ active: s <= rating }" @click="rating = s">
-          <el-icon :size="20"><StarFilled /></el-icon>
+          <el-icon :size="18"><StarFilled /></el-icon>
         </span>
-        <el-input v-if="rating > 0" v-model="ratingComment" size="small" placeholder="补充评价(可选)" style="width:200px;margin-left:8px" />
-        <el-button v-if="rating > 0" size="small" type="success" @click="submitFeedback" style="margin-left:8px">提交</el-button>
+        <input v-if="rating > 0" v-model="ratingComment" class="rating-comment" placeholder="补充一句（可选）" />
+        <button v-if="rating > 0" class="rating-submit" @click="submitFeedback">提交</button>
       </template>
-      <span v-else class="rating-thanks">感谢你的评价！⭐</span>
+      <span v-else class="rating-thanks">已收到你的评价，谢谢 ⭐</span>
     </div>
 
-    <div class="input-area">
+    <!-- 输入条 -->
+    <div class="composer">
       <input ref="fileInput" type="file" accept="image/*,audio/*" style="display:none" @change="onFileChange" />
-      <el-button :icon="Picture" :disabled="isStreaming" circle @click="triggerUpload" title="上传图片" />
-      <el-button :icon="Microphone" :disabled="true" circle title="语音(开发中)" />
-      <el-input v-model="inputText" type="textarea" :rows="1" placeholder="输入文字，或上传图片/语音..." :disabled="isStreaming" @keydown="onKeydown" resize="none" />
-      <el-button type="success" :icon="Promotion" :disabled="isStreaming || (!inputText.trim())" @click="doSend" circle />
+      <div class="composer-box">
+        <button class="composer-btn" :disabled="isStreaming" @click="triggerUpload" title="上传图片">
+          <el-icon :size="17"><Picture /></el-icon>
+        </button>
+        <button class="composer-btn" disabled title="语音（开发中）">
+          <el-icon :size="17"><Microphone /></el-icon>
+        </button>
+        <el-input
+          v-model="inputText"
+          type="textarea"
+          :rows="1"
+          placeholder="问小速：查订单、退换货、选鞋…"
+          :disabled="isStreaming"
+          resize="none"
+          class="composer-input"
+          @keydown="onKeydown"
+        />
+        <button class="send-btn" :disabled="isStreaming || !inputText.trim()" @click="doSend" title="发送">
+          <SwooshMark :size="15" :weight="3.4" />
+        </button>
+      </div>
+      <p class="composer-hint">小速会调用工具实时查询 · 支持图片识别与语音</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.chat-view { display: flex; flex-direction: column; height: 100vh; }
-.topbar { height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #e5e5e8; background: #fff; flex-shrink: 0; }
-.topbar h1 { font-size: 16px; font-weight: 600; flex: 1; }
-.status { font-size: 12px; color: #6e6e80; }
-.status.streaming { color: #10a37f; }
-.messages { flex: 1; overflow-y: auto; padding: 20px 0; }
-.input-area { max-width: 800px; margin: 0 auto; width: 100%; padding: 12px 20px 16px; display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
-.rating-bar { max-width: 800px; margin: 0 auto; width: 100%; padding: 8px 20px; display: flex; align-items: center; gap: 4px; font-size: 13px; color: #6e6e80; }
-.star { cursor: pointer; color: #ddd; transition: color 0.15s; }
-.star.active { color: #f5a623; }
-.star:hover { color: #f5a623; }
-.rating-label { margin-right: 4px; }
-.rating-thanks { color: #10a37f; font-weight: 500; }
-.orders-panel { max-width:800px; margin:0 auto; width:100%; padding:0 20px; font-size:13px; }
-.orders-list { background:#fff; border-radius:8px; padding:8px; margin-top:4px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
-.order-row { display:flex; align-items:center; gap:12px; padding:8px 10px; cursor:pointer; border-radius:6px; transition:background 0.15s; }
-.order-row:hover { background:#f5f6fa; }
-.order-id { font-family:monospace; font-size:12px; color:#6e6e80; min-width:130px; }
-.order-item { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.order-status { font-size:12px; font-weight:600; min-width:60px; text-align:center; }
-.status-已签收 { color:#10a37f; } .status-运输中 { color:#409eff; } .status-待发货 { color:#e6a23c; } .status-待付款 { color:#f56c6c; }
-.order-send { color:#409eff; font-size:12px; cursor:pointer; }
+.chat-view {
+  display: flex; flex-direction: column;
+  height: 100vh;
+  background: var(--canvas);
+}
+
+/* —— 顶栏 —— */
+.topbar {
+  height: 60px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas);
+}
+.icon-btn {
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.icon-btn:hover { border-color: var(--signal-line); color: var(--signal); }
+.brand-line { display: flex; align-items: center; gap: 9px; }
+.brand-name { font-weight: 700; font-size: 15px; letter-spacing: 0.2px; }
+.brand-sub { font-size: 12.5px; color: var(--ink-mute); }
+.brand-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-soft);
+}
+.brand-dot.streaming {
+  background: var(--signal);
+  box-shadow: 0 0 0 3px var(--signal-soft);
+  animation: pulse 1.1s var(--ease) infinite;
+}
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+
+/* —— 消息区 —— */
+.messages { flex: 1; overflow-y: auto; }
+.messages-inner {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 28px 24px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* —— 订单面板 —— */
+.orders-panel { max-width: 740px; margin: 0 auto; width: 100%; padding: 0 24px; font-size: 13px; }
+.orders-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--r-full);
+  padding: 4px 12px;
+  font: 13px var(--font-body);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.orders-toggle:hover { border-color: var(--signal-line); color: var(--signal); }
+.orders-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  margin-top: 8px;
+  padding: 6px;
+  box-shadow: var(--shadow-card);
+}
+.order-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 10px;
+  cursor: pointer;
+  border-radius: var(--r-s);
+  transition: background 0.12s;
+}
+.order-row:hover { background: var(--signal-soft); }
+.order-id { font-family: var(--font-mono); font-size: 12px; color: var(--ink-mute); min-width: 132px; }
+.order-item { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-status { font-size: 11.5px; font-weight: 600; min-width: 58px; text-align: center; padding: 2px 8px; border-radius: var(--r-full); }
+.st-已签收 { color: var(--ok); background: var(--ok-soft); }
+.st-运输中 { color: #2f6fd0; background: rgba(47, 111, 208, 0.1); }
+.st-待发货 { color: #c07a1d; background: rgba(192, 122, 29, 0.1); }
+.st-待付款 { color: #c0402a; background: rgba(192, 64, 42, 0.1); }
+.order-send { color: var(--signal); font-size: 12px; }
+.send-arrow { display: inline-block; transition: transform 0.12s var(--ease); }
+.order-row:hover .send-arrow { transform: translateX(3px); }
+.orders-empty { color: var(--ink-faint); font-size: 12px; }
+
+/* —— 评价栏 —— */
+.rating-bar {
+  max-width: 740px; margin: 0 auto; width: 100%;
+  padding: 2px 24px 6px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--ink-mute);
+}
+.star { color: var(--line-strong); cursor: pointer; transition: color 0.12s; }
+.star.active, .star:hover { color: var(--signal); }
+.rating-comment {
+  flex: 0 0 180px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  padding: 4px 9px;
+  font: 12.5px var(--font-body);
+  color: var(--ink);
+  background: var(--surface);
+}
+.rating-submit {
+  border: 1px solid var(--signal-line);
+  background: var(--signal-soft);
+  color: var(--signal-deep);
+  border-radius: var(--r-full);
+  padding: 3px 13px;
+  font: 12.5px/1.6 var(--font-body);
+  cursor: pointer;
+}
+.rating-submit:hover { background: var(--signal); color: #fff; }
+.rating-thanks { color: var(--ok); }
+
+/* —— 输入条 —— */
+.composer { max-width: 740px; margin: 0 auto; width: 100%; padding: 0 24px 14px; flex-shrink: 0; }
+.composer-box {
+  display: flex; align-items: flex-end; gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 8px 10px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s;
+}
+.composer-box:focus-within { border-color: var(--signal-line); }
+.composer-btn {
+  width: 38px; height: 38px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ink-mute);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.composer-btn:hover:not(:disabled) { color: var(--signal); background: var(--signal-soft); }
+.composer-btn:disabled { cursor: not-allowed; opacity: 0.45; }
+.composer-input { flex: 1; }
+.composer-input :deep(.el-textarea__inner) {
+  border: none; box-shadow: none; background: transparent;
+  font: 14.5px/1.6 var(--font-body);
+  color: var(--ink);
+  padding: 7px 4px;
+}
+.send-btn {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--signal);
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.send-btn:not(:disabled):hover { background: var(--signal-deep); }
+.send-btn:not(:disabled):active { transform: translateY(1px); }
+.send-btn:disabled { background: var(--line-strong); cursor: not-allowed; }
+.composer-hint { margin: 7px 2px 0; font-size: 11.5px; color: var(--ink-faint); text-align: center; }
 </style>

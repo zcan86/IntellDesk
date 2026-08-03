@@ -1,296 +1,218 @@
+/* ============================================================
+   IntelliDesk 设计系统 — 「盒中速递」
+   墨黑 × 鞋盒橙 × 店内暖白。签名元素：橙色勾形 swoosh。
+   唯一的强强调色是橙色，其余全部安静克制。
+   ============================================================ */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* —— 色板 —— */
+  --ink: #191a1d;
+  --ink-soft: #3f4145;
+  --ink-mute: #8b8c87;
+  --ink-faint: #b9bab4;
+  --canvas: #f6f6f2;
+  --surface: #ffffff;
+  --line: #e8e6e0;
+  --line-strong: #d6d4cc;
+  --signal: #ef4d21;
+  --signal-deep: #d43e14;
+  --signal-soft: rgba(239, 77, 33, 0.09);
+  --signal-line: rgba(239, 77, 33, 0.32);
+  --ok: #1c8a4b;
+  --ok-soft: rgba(28, 138, 75, 0.1);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* —— 字体 —— */
+  --font-display: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+  --font-body: 'Noto Sans SC', -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* —— 形态 —— */
+  --r-s: 8px;
+  --r-m: 14px;
+  --r-full: 999px;
+  --shadow-card: 0 1px 0 rgba(25, 26, 29, 0.03), 0 12px 30px -20px rgba(25, 26, 29, 0.22);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  color-scheme: light;
+  font: 15px/1.7 var(--font-body);
+  color: var(--ink);
+  background: var(--canvas);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  text-rendering: optimizeLegibility;
 }
 
+/* —— 暗色模式 —— */
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
-
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    --ink: #e8e8e3;
+    --ink-soft: #c2c3bc;
+    --ink-mute: #84857f;
+    --ink-faint: #5c5d58;
+    --canvas: #141519;
+    --surface: #1d1f25;
+    --line: #2b2d33;
+    --line-strong: #3a3d44;
+    --signal: #ff5a26;
+    --signal-deep: #ff7a4f;
+    --signal-soft: rgba(255, 90, 38, 0.15);
+    --signal-line: rgba(255, 90, 38, 0.4);
+    --ok: #3dd68c;
+    --ok-soft: rgba(61, 214, 140, 0.12);
+    --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -20px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
   }
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+/* —— Element Plus 主题对齐 —— */
+:root {
+  --el-color-primary: var(--signal);
+  --el-color-primary-light-3: #f2704a;
+  --el-color-primary-light-5: #f69a80;
+  --el-color-primary-light-7: #fac2b3;
+  --el-color-primary-light-8: #fdd9d0;
+  --el-color-primary-light-9: #feede9;
+  --el-color-primary-dark-2: var(--signal-deep);
+  --el-border-radius-base: 10px;
+  --el-font-family: var(--font-body);
 }
 
-#app {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  margin: 0;
+  overflow: hidden;
 }
 
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+/* —— 滚动条 —— */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-#next-steps ul {
-  list-style: none;
+/* ============================================================
+   Markdown 渲染（Agent 气泡内容）
+   ============================================================ */
+.md {
+  font-size: 14.5px;
+  line-height: 1.72;
+  word-break: break-word;
+}
+.md p {
+  margin: 0 0 8px;
+}
+.md p:last-child {
+  margin-bottom: 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 14px 0 6px;
+}
+.md h1 { font-size: 18px; }
+.md h2 { font-size: 16.5px; }
+.md h3 { font-size: 15.5px; }
+.md ul,
+.md ol {
+  margin: 6px 0 10px;
+  padding-left: 22px;
+}
+.md li {
+  margin: 3px 0;
+}
+.md ul li::marker {
+  color: var(--signal);
+}
+.md code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+.md pre {
+  background: var(--ink);
+  color: var(--canvas);
+  padding: 12px 14px;
+  border-radius: var(--r-s);
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.md pre code {
+  background: none;
+  border: none;
   padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+  color: inherit;
+  font-size: 12.5px;
 }
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
+.md table {
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 8px 0;
   width: 100%;
+}
+.md th,
+.md td {
+  border: 1px solid var(--line-strong);
+  padding: 5px 10px;
+  text-align: left;
+}
+.md th {
+  background: var(--canvas);
+  font-weight: 600;
+}
+.md blockquote {
+  border-left: 3px solid var(--signal-line);
+  margin: 8px 0;
+  padding: 2px 14px;
+  color: var(--ink-soft);
+}
+.md a {
+  color: var(--signal);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 12px 0;
+}
+.md strong {
+  font-weight: 700;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
-
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+/* —— 尊重系统"减少动效" —— */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

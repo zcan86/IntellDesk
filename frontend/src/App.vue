@@ -29,9 +29,16 @@ function onSelectSession(id: string | null) {
   </div>
 </template>
 
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f5f6fa; color: #333; height: 100vh; overflow: hidden; }
-.app { display: flex; height: 100vh; }
-.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+<style scoped>
+.app {
+  display: flex;
+  height: 100vh;
+  background: var(--canvas);
+}
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 </style>
