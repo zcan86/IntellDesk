@@ -1,17 +1,19 @@
 # IntelliDesk — 多模态电商客服 Agent
 
-基于 **LangGraph Agent + Adaptive-RAG + MCP 协议 + SQLite** 的耐克电商客服系统。网关鉴权、4层请求路由、7工具、订单/退款/物流全链路、服务评价。
+基于 **LangGraph Agent + Adaptive-RAG + MCP 协议 + SQLite** 的耐克电商客服系统。网关鉴权、4层请求路由、9工具、订单/退款/物流全链路、多模态识别、服务评价。
 
 ---
 
 ## 功能
 
 - **Adaptive-RAG 检索**：BM25 + BGE-m3 混合检索 + RRF 融合 + LLM Rerank
-- **电商工具链**：订单查询、物流跟踪、退换货处理、商品搜索
+- **电商工具链**：9工具 —— 订单查询、物流跟踪、退换货处理、商品搜索、知识库、图片识别、语音转文字、计算、时间
 - **SSE 流式输出**：打字机效果 + 工具调用过程实时可见
 - **多轮记忆**：5轮滑动窗口 + 60分钟 TTL + 手动清除
 - **网关层**：API Key 鉴权 + IP 限流 + LLM 并发排队（Semaphore 5）
-- **4层请求路由**：精确→关键词→语义→Agent，40%请求零LLM成本
+- **4层请求路由**：精确→关键词→语义→Agent，95%请求零LLM成本
+- **多模态识别**：Qwen-VL-Max 图片识别 + Whisper 语音转文字，不可用时友好降级
+- **前端设计系统**：「盒中速递」—— 墨黑 × 鞋盒橙 × 暖白，橙色勾形 swoosh 签名元素，暗色模式自适应
 - **Token统计** + **用户画像** + **服务评价**
 
 ---
@@ -29,11 +31,12 @@
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | Vue 3 + Element Plus + Vite |
+| 前端 | Vue 3 + Element Plus + Vite + fontsource 字体（盒中速递设计系统） |
 | 后端 | FastAPI + Pydantic |
 | Agent | LangGraph + DeepSeek |
 | 检索 | BM25 + BGE-m3 + RRF + LLM Rerank |
-| 工具协议 | MCP (HTTP, McpToolServer) |
+| 工具协议 | MCP (HTTP, 独立进程 :8100) |
+| 多模态 | Qwen-VL-Max（阿里百炼）+ Whisper 语音转文字 |
 | 数据库 | SQLite (用户/订单/退款/反馈) |
 
 ---
@@ -41,15 +44,19 @@
 ## 快速开始
 
 ```bash
+# 0) 创建虚拟环境并安装依赖（已验证 Python 3.14，也可用 3.13）
+python -m venv venv
+venv/Scripts/pip install -r requirements.txt   # Windows 用 Scripts/，macOS/Linux 用 bin/
+
 # 终端 1: MCP Server
-python mcp_server/server.py     # → :8100
+venv/Scripts/python mcp_server/server.py      # → :8100
 
 # 终端 2: Agent
 cp .env.example .env         # 填入 API Keys
-python main.py            # → :8000
+venv/Scripts/python main.py  # → :8000
 
 # 终端 3: 前端
-cd frontend && npm install && npm run dev # → :5173
+cd frontend && npm install && npm run dev     # → :5173
 ```
 
 ---
@@ -58,20 +65,21 @@ cd frontend && npm install && npm run dev # → :5173
 
 ```
 ├── app/
-│  ├── agent.py       # Agent System Prompt
+│  ├── agent.py       # Agent System Prompt（客服人设「小速」）
+│  ├── agents/        # LLM 意图识别（7类）+ 多 Agent 编排器
 │  ├── config.py       # 全局配置
 │  ├── database.py      # SQLite (users/orders/returns/feedback)
 │  ├── gateway.py      # 鉴权 + 限流
 │  ├── router.py       # 4层请求路由
 │  ├── stats.py       # Token统计
-│  ├── rag/         # 检索（ChromaDB+BM25+RRF+Rerank）
+│  ├── rag/         # Adaptive-RAG（ChromaDB+BGE-m3+BM25+RRF+Rerank）
 │  ├── routers/chat.py    # 全部 API 端点
 │  ├── tools/        # 工具实现（不直接import,走MCP）
 │  └── mcp_client.py     # MCP Client
-├── mcp_server/        # MCP Tool Server (独立进程)
-├── frontend/         # Vue 3 前端
-├── docs/           # 12份知识文档 + 产品文档
-├── tests/          # 21个测试
+├── mcp_server/        # MCP Tool Server (独立进程 :8100)
+├── frontend/         # Vue 3 前端（盒中速递设计系统 + SwooshMark 签名）
+├── docs/           # 14份开发文档 + 4份业务文档（RAG 知识源）
+├── tests/          # 21个测试（API 5 + 检索 7 + 工具 9）
 └── data/           # SQLite DB + 商品图片
 ```
 
@@ -101,8 +109,9 @@ cd frontend && npm install && npm run dev # → :5173
 - [x] ChromaDB + BGE-m3 语义检索
 - [x] MCP 协议集成
 - [x] Adaptive-RAG (BM25+BGE-m3+RRF+Rerank)
-- [x] 电商客服（7工具：知识库/订单/物流/退换货/商品/计算/时间）
+- [x] 电商客服（9工具：知识库/订单/物流/退换货/商品/图片识别/语音/计算/时间）
 - [x] Vue 3 前端重构
+- [x] 前端「盒中速递」设计系统（SwooshMark 签名 + 暗色模式）
 - [x] SQLite 订单数据库 + 退款退货 + 物流跟踪
 - [x] 4层请求路由 + 网关鉴权限流
 - [x] 服务评价 + Token统计 + 用户画像
