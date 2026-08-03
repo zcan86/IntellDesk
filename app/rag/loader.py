@@ -122,17 +122,34 @@ def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> boo
 
     embedding_fn = _get_embedding_function()
 
-    # 1. 加载并切分
+    # 1. 加载并切分（原始文本同时用于 BM25，无 Embedding API 成本）
     chunks = _load_and_split_docs(docs_path)
     if not chunks:
         logger.warning("没有可索引的文档块")
         return False
-
-    # 2. 构建向量索引
-    logger.info(f"  正在构建 ChromaDB 向量索引（{len(chunks)} 个块）...")
     contents = [c["content"] for c in chunks]
-    metadatas = [c["metadata"] for c in chunks]
 
+    # 2. 向量索引：优先加载已有索引，避免 from_texts 重复追加导致集合无限膨胀
+    if not force_rebuild and Path(persist_dir).exists():
+        try:
+            _vector_store = Chroma(
+                collection_name="intellidesk_docs",
+                embedding_function=embedding_fn,
+                persist_directory=persist_dir,
+            )
+            count = _vector_store._collection.count()
+            if count > 0:
+                logger.info(f"  加载已有向量索引: {count} 个块（跳过重复构建）")
+                _init_bm25(contents)
+                return True
+            _vector_store = None  # 集合存在但为空 → 继续构建
+        except Exception as e:
+            logger.warning(f"  加载已有索引失败，将重新构建: {e}")
+            _vector_store = None
+
+    # 2'. 首次构建或强制重建
+    logger.info(f"  正在构建 ChromaDB 向量索引（{len(chunks)} 个块）...")
+    metadatas = [c["metadata"] for c in chunks]
     _vector_store = Chroma.from_texts(
         texts=contents,
         metadatas=metadatas,
@@ -143,13 +160,17 @@ def build_index(docs_dir: str | None = None, force_rebuild: bool = False) -> boo
     logger.info(f"  ChromaDB 索引就绪: {_vector_store._collection.count()} 个块, 持久化到 {persist_dir}")
 
     # 3. 同步初始化 BM25 索引（用于混合检索）
+    _init_bm25(contents)
+    return True
+
+
+def _init_bm25(contents: list[str]):
+    """初始化 BM25 关键词索引（混合检索用，纯文本无 API 成本）"""
     try:
         from app.rag.hybrid_retriever import init_hybrid_index
         init_hybrid_index(contents)
     except Exception as e:
         logger.warning(f"  BM25 索引初始化失败（混合检索降级为纯语义）: {e}")
-
-    return True
 
 
 def get_index_status() -> dict:
