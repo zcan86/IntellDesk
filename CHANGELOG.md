@@ -10,6 +10,7 @@
 - **前端「盒中速递」设计系统**：墨黑 × 鞋盒橙 × 店内暖白，橙色勾形 swoosh 签名元素（`SwooshMark.vue`），暗色模式自适应、reduced-motion 支持
 - 本地 fontsource 字体包（ZCOOL 黄油体 / Noto Sans SC / JetBrains Mono），不依赖外网 CDN
 - `CHANGELOG.md`（本文件）
+- **MCP schema 回归测试**（`tests/test_mcp_client.py`，4 例）：守护 `_make_args_model` 产出具名参数，防止退回 `**kwargs` 空壳 schema
 
 ### Fixed
 - **修复 MCP 工具间歇性不被调用**：`**kwargs` 签名使 langchain 从函数签名推断出空壳参数 schema（`{kwargs: {type: object, additionalProperties: true}}`），DeepSeek 拿到模糊参数间歇性放弃调用工具，只输出"我来查询"类承诺句而卡住。现从 MCP `inputSchema` 动态生成 pydantic `args_schema`（`app/mcp_client.py`），工具调用恢复稳定
