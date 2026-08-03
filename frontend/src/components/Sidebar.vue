@@ -51,7 +51,7 @@ onMounted(loadSessions)
     </div>
 
     <button class="new-chat" @click="newChat">
-      <Plus :size="15" /> 新对话
+      <Plus :size="12" /><span class="new-chat-label">新对话</span>
     </button>
 
     <div class="history">
@@ -109,16 +109,18 @@ onMounted(loadSessions)
 .brand-text span { font-size: 11px; color: rgba(242, 242, 238, 0.5); }
 
 .new-chat {
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; padding: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; padding: 3px 8px;
   border: 1px solid rgba(242, 242, 238, 0.16);
-  border-radius: var(--r-s);
+  border-radius: 6px;
   background: rgba(242, 242, 238, 0.06);
   color: #f2f2ee;
-  font: 13.5px var(--font-body);
+  font: 12px var(--font-body);
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
+.new-chat-label { line-height: 1; }
 .new-chat:hover { background: rgba(242, 242, 238, 0.12); border-color: rgba(242, 242, 238, 0.28); }
 
 .history { flex: 1; overflow-y: auto; margin-top: 16px; }

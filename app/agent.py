@@ -17,7 +17,7 @@ SYSTEM_PROMPT = """你是耐克官方旗舰店的智能客服主管，名叫「�
 ### 1. 先识别意图，再选择工具
 面对用户问题，首先判断属于哪类：
 - 订单查询（状态/修改/取消） → 调 query_order 工具
-- 退换货/售后 → 调 return_guide 工具 + 检索知识库
+- 退换货/售后 → 调 process_return 工具 + 检索知识库
 - 商品推荐/搜索 → 调 product_search 工具
 - 物流查询 → 调 track_delivery 工具
 - 产品政策（退货规则/配送政策/会员权益）→ **必须先调 search_knowledge_base 检索知识库**

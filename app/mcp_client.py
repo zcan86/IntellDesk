@@ -10,9 +10,34 @@
 
 import json
 import httpx
+from pydantic import create_model, Field
 from langchain.tools import tool
 from loguru import logger
 from app.config import settings
+
+
+def _make_args_model(schema: dict | None):
+    """从 MCP inputSchema 生成 pydantic 参数模型
+
+    修复 `**kwargs` 签名导致 langchain 推断出空壳 schema
+    （`{kwargs: {type: object, additionalProperties: true}}`）的问题，
+    否则 DeepSeek 拿到模糊参数会间歇性放弃调用工具。
+    """
+    schema = schema or {}
+    props = schema.get("properties", {})
+    required = set(schema.get("required", []))
+    fields = {}
+    for name, prop in props.items():
+        ptype = prop.get("type", "string")
+        pytype = {"string": str, "integer": int, "number": float, "boolean": bool}.get(ptype, str)
+        fields[name] = (
+            pytype,
+            Field(
+                description=prop.get("description", ""),
+                default=... if name in required else None,
+            ),
+        )
+    return create_model("ToolArgs", **fields)
 
 
 def _build_tool(tool_def: dict, server_url: str):
@@ -20,7 +45,7 @@ def _build_tool(tool_def: dict, server_url: str):
     t_name = tool_def["name"]
     t_desc = tool_def.get("description", "")
 
-    @tool(t_name, description=t_desc)
+    @tool(t_name, description=t_desc, args_schema=_make_args_model(tool_def.get("inputSchema")))
     def _wrapper(**kwargs) -> str:
         try:
             # LangChain 对 **kwargs 工具会双层包裹：kwargs={"kwargs": {...actual...}}
