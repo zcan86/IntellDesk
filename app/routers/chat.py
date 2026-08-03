@@ -188,13 +188,20 @@ async def chat(req: ChatRequest):
         if cached:
             reply, source = cached
             stats_record(session_id, source, len(req.message), _time.time() - t0)
-            # 写入 Agent 记忆，让后续对话能引用上下文
+            # 写入 Agent 记忆，让后续对话能引用上下文（同步播种显式 order_context）
             try:
                 from langchain_core.messages import HumanMessage, AIMessage
                 agent = get_agent()
+                updates: dict = {
+                    "messages": [HumanMessage(content=req.message), AIMessage(content=reply)]
+                }
+                ctx = analyze_request(req.message)
+                if ctx.get("order_id") or ctx["intent"] != "general":
+                    updates["order_context"] = ctx
+                    updates["intent"] = ctx["intent"]
                 agent.update_state(
                     {"configurable": {"thread_id": session_id}},
-                    {"messages": [HumanMessage(content=req.message), AIMessage(content=reply)]},
+                    updates,
                 )
             except Exception as e:
                 logger.warning(f"写入记忆失败: {e}")
