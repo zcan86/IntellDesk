@@ -30,7 +30,7 @@ def rerank(
     query: str,
     documents: list[dict],
     top_k: int = 3,
-    threshold: float = 0.5,
+    threshold: float = 3,
 ) -> list[dict]:
     """LLM 重排序
 

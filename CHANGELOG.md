@@ -16,6 +16,7 @@
 - **修复 MCP 工具间歇性不被调用**：`**kwargs` 签名使 langchain 从函数签名推断出空壳参数 schema（`{kwargs: {type: object, additionalProperties: true}}`），DeepSeek 拿到模糊参数间歇性放弃调用工具，只输出"我来查询"类承诺句而卡住。现从 MCP `inputSchema` 动态生成 pydantic `args_schema`（`app/mcp_client.py`），工具调用恢复稳定
 - **修正 System Prompt 工具名笔误**：`return_guide` → `process_return`（`app/agent.py`），避免退换货查询误导模型
 - **前端侧栏"新对话"按钮**：缩小尺寸、改为 6px 圆角，`white-space: nowrap` 保证文字单行（`frontend/src/components/Sidebar.vue`）
+- **修复 reranker 阈值过滤失效**：`threshold=0.5` 在 1-5 分制下是空操作（所有分数都 ≥ 0.5），低分文档永不剔除。改为 `threshold=3`（丢弃"略有关联/完全无关"）（`app/rag/reranker.py`），新增 `tests/test_reranker.py`（4 例）守护过滤逻辑
 
 ### Changed
 - 环境重建：原 venv 依赖的 miniconda 已移除，改用系统 Python 3.14 重建 venv 并重装依赖
