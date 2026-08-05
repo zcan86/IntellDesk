@@ -78,7 +78,7 @@ cd frontend && npm install && npm run dev     # → :5173
 │  └── mcp_client.py     # MCP Client
 ├── mcp_server/        # MCP Tool Server (独立进程 :8100)
 ├── frontend/         # Vue 3 前端（盒中速递设计系统 + SwooshMark 签名）
-├── docs/           # dev/ 开发文档 + products/ 业务文档（RAG 仅索引 products/）
+├── docs/           # products/ 业务文档（RAG 唯一索引源；开发文档已移至 Obsidian）
 ├── tests/          # 32个测试（API 5 + 检索 7 + 工具 9 + MCP schema 4 + 上下文 7）
 ├── data/           # SQLite DB + 商品图片
 └── CLAUDE.md       # 项目开发约定（开发文档同步规则 / 环境 / 提交纪律）

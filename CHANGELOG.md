@@ -29,3 +29,7 @@
 
 ### Removed
 - 删除 `docs/项目总结-简历版.md`
+- **开发文档迁出项目仓库**：`docs/dev/` 全部移入 Obsidian 知识库（`D:\obsidianStore\项目01-IntellDesk`），项目内 `docs/` 只保留业务文档
+- 清理 Vite 模板残留：`HelloWorld.vue` / `assets/vite.svg` / `assets/vue.svg` / `public/icons.svg`
+- 清理未使用遗留：`mcp_server/tools/`（server.py 实际用 app/tools）、`mcp_server/docs/`、`gen_vue.py`、`test_llm.py`
+- 清理 `.pytest_cache/` 与 `__pycache__` 缓存

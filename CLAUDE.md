@@ -8,10 +8,11 @@
 
 | 改动类型 | 必须更新 |
 |---|---|
-| Feature / Bugfix / 架构 | `docs/dev/` 对应 phase 文档 + `CHANGELOG.md` |
+| Feature / Bugfix / 架构 | Obsidian 仓库（`D:\obsidianStore\项目01-IntellDesk`）对应文档 + `CHANGELOG.md` |
 | 小修（格式/注释/配置） | 仅 `CHANGELOG.md` |
 
-- `docs/dev/` 是开发历史文档（phase 系列），`docs/products/` 是 RAG 知识源（**只有后者被索引**，勿把开发文档放进去）
+- **开发文档已迁出项目仓库**，存放在 Obsidian 知识库；项目内 `docs/` 只保留 `docs/products/` 业务文档（RAG 唯一索引源）
+- 勿把开发/架构文档放回 `docs/`（会被当作知识源索引）
 - CHANGELOG 格式：`## [版本] - 日期`，分 `Added / Fixed / Changed / Removed`
 
 ## 运行环境（实测关键事实）
