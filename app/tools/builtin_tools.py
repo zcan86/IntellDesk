@@ -20,7 +20,7 @@ def calculator(expression: str) -> str:
     Returns:
         计算结果
     """
-    logger.info(f"🔢 计算: {expression}")
+    logger.info(f" 计算: {expression}")
 
     try:
         # 安全的白名单函数
@@ -59,7 +59,7 @@ def calculator(expression: str) -> str:
         else:
             result_str = str(result)
 
-        return f"📐 {expression} = {result_str}"
+        return f" {expression} = {result_str}"
 
     except SyntaxError:
         return f"表达式「{expression}」语法错误，请输入合法的数学表达式。"
@@ -82,12 +82,12 @@ def get_current_time(format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
     Returns:
         当前日期时间的格式化字符串
     """
-    logger.info("🕐 查询当前时间")
+    logger.info(" 查询当前时间")
 
     now = datetime.now()
     weekday_map = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
 
     return (
-        f"🕐 当前时间：{now.strftime(format_str)}\n"
+        f" 当前时间：{now.strftime(format_str)}\n"
         f"   {weekday_map[now.weekday()]}"
     )

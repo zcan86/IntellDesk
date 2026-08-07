@@ -539,13 +539,19 @@ async def clear_session(session_id: str):
 # ── 订单查询 API ────────────────────────────────────────────
 
 @router.get("/orders/{user_id}")
-async def list_orders(user_id: str):
-    """查询用户的所有订单"""
+async def list_orders(user_id: str, status: str | None = None):
+    """查询用户的所有订单，可按状态过滤
+
+    查询参数 status（可选）：待付款 / 待发货 / 运输中 / 已签收
+    示例：GET /api/orders/u001?status=已签收
+    """
     from app.database import get_user_orders, get_user
     user = get_user(user_id)
     if not user:
         return {"error": "用户不存在", "user_id": user_id}
     orders = get_user_orders(user_id)
+    if status:
+        orders = [o for o in orders if o["status"] == status]
     return {"user": user, "orders": orders, "count": len(orders)}
 
 

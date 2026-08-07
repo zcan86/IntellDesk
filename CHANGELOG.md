@@ -13,6 +13,7 @@
 - **MCP schema 回归测试**（`tests/test_mcp_client.py`，4 例）：守护 `_make_args_model` 产出具名参数，防止退回 `**kwargs` 空壳 schema
 
 ### Fixed
+- **移除全部回复中的 emoji**：工具输出（ecommerce/router/builtin_tools/knowledge_search）与 System Prompt 规则统一去掉 emoji 表情，避免测试断言时 emoji（如 ❌）与同形字符（如字母 X）肉眼难辨导致断言失败（`app/tools/*` / `app/router.py` / `app/agent.py`）
 - **修复 MCP 工具间歇性不被调用**：`**kwargs` 签名使 langchain 从函数签名推断出空壳参数 schema（`{kwargs: {type: object, additionalProperties: true}}`），DeepSeek 拿到模糊参数间歇性放弃调用工具，只输出"我来查询"类承诺句而卡住。现从 MCP `inputSchema` 动态生成 pydantic `args_schema`（`app/mcp_client.py`），工具调用恢复稳定
 - **修正 System Prompt 工具名笔误**：`return_guide` → `process_return`（`app/agent.py`），避免退换货查询误导模型
 - **前端侧栏"新对话"按钮**：缩小尺寸、改为 6px 圆角，`white-space: nowrap` 保证文字单行（`frontend/src/components/Sidebar.vue`）

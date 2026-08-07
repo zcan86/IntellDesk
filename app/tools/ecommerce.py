@@ -20,7 +20,7 @@ def query_order(order_id: str) -> str:
     Args:
         order_id: 订单号，如 DD20240701001
     """
-    logger.info(f"📦 查询订单: {order_id}")
+    logger.info(f" 查询订单: {order_id}")
     from app.database import get_order
     order = get_order(order_id)
 
@@ -28,16 +28,16 @@ def query_order(order_id: str) -> str:
         return f"未找到订单 {order_id}。请确认订单号是否正确。"
 
     shipping_map = {
-        "待付款": "⏳ 待付款",
-        "待发货": "📦 待发货",
-        "运输中": "🚚 运输中",
-        "已签收": "✅ 已签收",
-        "已取消": "❌ 已取消",
+        "待付款": " 待付款",
+        "待发货": " 待发货",
+        "运输中": " 运输中",
+        "已签收": " 已签收",
+        "已取消": " 已取消",
     }
     status_text = shipping_map.get(order["status"], order["status"])
 
     lines = [
-        f"📦 订单 {order_id}",
+        f" 订单 {order_id}",
         f"  用户：{order.get('user_name', '')}",
         f"  商品：{order['product_name']}",
         f"  尺码：EU {order['shoe_size']}" if order.get("shoe_size") else "",
@@ -57,7 +57,7 @@ def query_order(order_id: str) -> str:
 @tool
 def track_delivery(order_id: str) -> str:
     """查询物流轨迹。当用户询问快递到哪了、物流详情时调用。"""
-    logger.info(f"🚚 物流查询: {order_id}")
+    logger.info(f" 物流查询: {order_id}")
     from app.database import get_order
     order = get_order(order_id)
 
@@ -83,18 +83,18 @@ def track_delivery(order_id: str) -> str:
 
     if status == "已签收":
         return (
-            f"🚚 订单 {order_id}\n"
+            f" 订单 {order_id}\n"
             f"  快递单号：{tn}\n"
             f"  发货地：浙江杭州耐克仓库\n"
             f"  目的地：{address}\n"
-            f"  状态：✅ 已签收"
+            f"  状态： 已签收"
         )
 
     # 运输中 — 模拟轨迹节点
     now = datetime.now()
     product = order["product_name"]
     return (
-        f"🚚 订单 {order_id} — {product}\n"
+        f" 订单 {order_id} — {product}\n"
         f"  快递单号：{tn}\n"
         f"  发货地：浙江杭州耐克仓库\n"
         f"  目的地：{address}\n\n"
@@ -103,7 +103,7 @@ def track_delivery(order_id: str) -> str:
         f"  ● {(now - timedelta(hours=6)).strftime('%m-%d %H:%M')}  快件到达【{dest}中转站】\n"
         f"  ● {(now - timedelta(hours=18)).strftime('%m-%d %H:%M')}  快件离开【杭州集散中心】\n"
         f"  ● {(now - timedelta(hours=24)).strftime('%m-%d %H:%M')}  【浙江杭州耐克仓库】已揽件\n\n"
-        f"  预计今天到达，请保持电话畅通 📱"
+        f"  预计今天到达，请保持电话畅通 "
     )
 
 
@@ -119,21 +119,21 @@ def process_return(order_id: str, reason: str = "", return_type: str = "退货�
         reason: 退换货原因（质量问题/尺码不合适/不想要/发错货）
         return_type: 退货退款 / 退货 / 换货
     """
-    logger.info(f"🔄 退换货申请: {order_id} {return_type} ({reason})")
+    logger.info(f" 退换货申请: {order_id} {return_type} ({reason})")
     from app.database import create_return_request
 
     result = create_return_request(order_id, reason, return_type)
 
     if result["success"]:
         return (
-            f"🔄 {return_type}申请\n"
+            f" {return_type}申请\n"
             f"  订单: {result['order']}\n"
             f"  签收天数: {result['days_since_sign']} 天\n"
             f"  原因: {reason}\n\n"
             f"{result['steps']}"
         )
     else:
-        return f"❌ 无法申请{return_type}\n{result['reason']}"
+        return f" 无法申请{return_type}\n{result['reason']}"
 
 
 @tool
@@ -145,7 +145,7 @@ def product_search(keyword: str) -> str:
     Args:
         keyword: 搜索关键词
     """
-    logger.info(f"🔍 商品搜索: {keyword}")
+    logger.info(f" 商品搜索: {keyword}")
 
     catalog = {
         1:  ("Nike Air Max 97", 1199, ["气垫鞋", "运动休闲"], ["银色"]),
@@ -218,7 +218,7 @@ def product_search(keyword: str) -> str:
     if min_price and max_price: filters.append(f"{min_price}-{max_price}")
     filter_str = f"（{'/'.join(filters)}）" if filters else ""
 
-    lines.append(f"🔍 「{keyword}」{filter_str}共 {len(results)} 款：")
+    lines.append(f" 「{keyword}」{filter_str}共 {len(results)} 款：")
     for idx, name, price, tags, colors in results[:5]:
         color_str = "/".join(colors)
         lines.append(f"  #{idx} {name} — ¥{price} | {color_str} | {tags[0]} | EU36-44")

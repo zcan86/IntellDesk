@@ -17,7 +17,7 @@ def search_knowledge_base(query: str) -> str:
     Args:
         query: 自然语言搜索查询
     """
-    logger.info(f"🔍 检索: {query[:100]}...")
+    logger.info(f" 检索: {query[:100]}...")
     results = hybrid_search(query, top_k=settings.TOP_K_RETRIEVAL)
 
     if not results:
